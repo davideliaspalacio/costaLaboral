@@ -27,7 +27,8 @@ export async function registrarCandidato(_prev: FormState, formData: FormData): 
   const barrio = g("barrio") || null;
   const experiencia = g("experiencia") || null;
 
-  if (!nombre || !email || !password || !whatsapp || !ciudad || !area_interes || !nivel_educativo)
+  const requeridos = { nombre, email, password, whatsapp, ciudad, area_interes, nivel_educativo };
+  if (Object.values(requeridos).some((valor) => !valor))
     return { error: "Completa todos los campos obligatorios." };
   if (password.length < 6) return { error: "La contraseña debe tener al menos 6 caracteres." };
 
