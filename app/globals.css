@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/* ============================================================
+   CostaLaboral — Design System v2 · "Caribe bravo"
+   Editorial + cartoon, ejecutado con intención (principios Impeccable):
+   sin gradientes, sin glassmorphism, sin sobre-redondeo. Color plano,
+   bordes gruesos de tinta, sombra dura tipo sticker, jerarquía fuerte.
+   ============================================================ */
+
+@theme {
+  /* --- Marca "mar" (teal caribe) — reemplaza el azul genérico --- */
+  --color-brand-50: #e8f7f5;
+  --color-brand-100: #c9efeb;
+  --color-brand-200: #97e0da;
+  --color-brand-300: #5fccc4;
+  --color-brand-400: #23b3aa;
+  --color-brand-500: #109a91;
+  --color-brand-600: #0c7d76;
+  --color-brand-700: #0b625d;
+  --color-brand-800: #0d4d4a;
+  --color-brand-900: #0e3f3d;
+
+  /* --- Acento "coral" (energía) --- */
+  --color-accent-50: #fff0ec;
+  --color-accent-100: #ffddd2;
+  --color-accent-300: #ffab93;
+  --color-accent-500: #ff5c39;
+  --color-accent-600: #ed4321;
+  --color-accent-700: #c33216;
+
+  /* --- "sol" (amarillo caribe) --- */
+  --color-sol-100: #fff3cc;
+  --color-sol-200: #ffe79a;
+  --color-sol-300: #ffd75e;
+  --color-sol-400: #ffc53d;
+  --color-sol-500: #f2ad14;
+
+  /* --- Neutros cálidos --- */
+  --color-canvas: #fffbf2;
+  --color-surface: #ffffff;
+  --color-ink: #17140f;
+  --color-ink-soft: #3c362c;
+  --color-muted: #756c5b;
+  --color-line: #e7dfce;
+
+  /* --- Semánticos --- */
+  --color-success-50: #e8f6ec;
+  --color-success-500: #2fa84f;
+  --color-success-600: #218a3f;
+  --color-warn-50: #fff6e0;
+  --color-warn-500: #e79600;
+  --color-danger-50: #fdecec;
+  --color-danger-500: #e5484d;
+  --color-danger-600: #cc3439;
+
+  /* --- Radios (moderados, nada de pills por defecto) --- */
+  --radius-lg: 0.65rem;
+  --radius-xl: 0.85rem;
+  --radius-2xl: 1.1rem;
+
+  /* --- Sombra dura "sticker" (intencional, no elevación difusa) --- */
+  --shadow-sticker: 3px 3px 0 0 var(--color-ink);
+  --shadow-sticker-lg: 5px 5px 0 0 var(--color-ink);
+  --shadow-sticker-brand: 4px 4px 0 0 var(--color-brand-700);
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-jakarta), sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+  }
+  /* Tarjeta base: borde grueso de tinta (motivo sticker). */
+  .card {
+    @apply rounded-2xl border-2 border-ink bg-surface;
+  }
+  /* Tarjeta con sombra dura, para elementos destacados/interactivos. */
+  .card-pop {
+    @apply rounded-2xl border-2 border-ink bg-surface shadow-[var(--shadow-sticker)];
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border-2 border-ink bg-surface px-3 py-1 text-sm font-semibold text-ink;
+  }
+  .input-base {
+    @apply w-full rounded-xl border-2 border-ink bg-surface px-4 py-3 text-ink outline-none transition
+           placeholder:text-muted focus:-translate-y-0.5 focus:shadow-[var(--shadow-sticker)];
+  }
+  .label-base {
+    @apply mb-1.5 block text-sm font-bold text-ink;
+  }
+  /* Etiqueta editorial (kicker) sobre títulos. */
+  .kicker {
+    @apply inline-flex items-center gap-2 rounded-full border-2 border-ink bg-sol-300 px-3 py-1 text-xs font-bold uppercase tracking-wide text-ink;
+  }
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+
+::selection {
+  background: var(--color-sol-300);
+  color: var(--color-ink);
+}
