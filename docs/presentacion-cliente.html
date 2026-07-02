@@ -1,0 +1,205 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+* { margin:0; padding:0; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+:root{ --ink:#17140f; --canvas:#fffbf2; --brand:#0c7d76; --sol:#ffd75e; --coral:#ff5c39; --muted:#756c5b; --line:#e7dfce; }
+body{ font-family:'Plus Jakarta Sans',sans-serif; color:var(--ink); }
+h1,h2,h3{ font-family:'Bricolage Grotesque','Plus Jakarta Sans',sans-serif; letter-spacing:-.02em; }
+.page{ width:100%; min-height:262mm; display:flex; flex-direction:column; page-break-after:always; }
+.page:last-child{ page-break-after:auto; }
+.kicker{ display:inline-block; border:2px solid var(--ink); background:var(--sol); border-radius:999px; padding:5px 14px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+.sec-title{ font-size:30px; font-weight:800; margin-top:12px; line-height:1.05; }
+.sec-text{ font-size:15px; color:#3c362c; margin-top:8px; max-width:165mm; line-height:1.5; }
+.shot{ margin-top:14px; flex:1; display:flex; align-items:flex-start; justify-content:center; }
+.shot img{ max-width:100%; max-height:205mm; border:2px solid var(--ink); border-radius:10px; }
+
+/* Portada */
+.cover{ min-height:262mm; display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
+  background:var(--brand); color:#fff; border:2px solid var(--ink); border-radius:16px; padding:24mm; page-break-after:always; }
+.cover .badge{ background:var(--sol); color:var(--ink); border:2px solid var(--ink); border-radius:999px; padding:6px 16px; font-weight:800; font-size:13px; }
+.cover h1{ font-size:52px; font-weight:800; margin-top:18px; line-height:1.0; }
+.cover p{ font-size:18px; margin-top:16px; max-width:150mm; opacity:.95; }
+.cover .meta{ margin-top:28px; font-size:14px; opacity:.9; }
+.logo{ display:flex; align-items:center; gap:10px; font-weight:800; font-size:22px; }
+.logo .mk{ width:36px; height:36px; border-radius:9px; border:2px solid var(--ink); background:var(--sol); display:flex; align-items:center; justify-content:center; }
+
+/* Spotlight (IA) */
+.spot{ min-height:262mm; display:flex; flex-direction:column; justify-content:center; background:var(--sol);
+  border:2px solid var(--ink); border-radius:16px; padding:24mm; page-break-after:always; }
+.spot .kicker{ background:#fff; }
+.spot h1{ font-size:44px; font-weight:800; margin-top:16px; line-height:1.05; }
+.spot p{ font-size:17px; margin-top:14px; max-width:150mm; line-height:1.55; }
+
+/* Cierre */
+.close{ background:var(--ink); color:var(--canvas); border-radius:16px; padding:24mm; min-height:262mm; display:flex; flex-direction:column; justify-content:center; }
+.close h1{ font-size:40px; }
+.close ul{ margin-top:18px; list-style:none; }
+.close li{ font-size:16px; margin-top:10px; padding-left:26px; position:relative; }
+.close li:before{ content:"✓"; position:absolute; left:0; color:var(--sol); font-weight:800; }
+</style></head><body>
+  <div class="cover">
+    <div class="logo"><span class="mk">🌴</span> CostaLaboral</div>
+    <span class="badge" style="margin-top:22mm">Presentación de producto</span>
+    <h1>La plataforma de empleo del Caribe colombiano</h1>
+    <p>Conectamos a la gente de la Costa con trabajo real: cada persona recibe solo las vacantes que encajan con su perfil, directo a su WhatsApp. Las empresas publican gratis.</p>
+    <div class="meta">Un recorrido por la plataforma, pantalla por pantalla · Julio 2026</div>
+  </div>
+
+  
+  <section class="page">
+    <span class="kicker">Página principal</span>
+    <h2 class="sec-title">La bienvenida a CostaLaboral</h2>
+    <p class="sec-text">Lo primero que ve la gente: una promesa clara —recibe solo las vacantes que encajan contigo, directo a tu WhatsApp— y las empresas publican gratis. Con botones grandes para empezar de una.</p>
+    <div class="shot"><img src="capturas/01-landing.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Explorar</span>
+    <h2 class="sec-title">Todas las ofertas de la Costa</h2>
+    <p class="sec-text">Un espacio para leer todas las vacantes a su ritmo, con buscador por palabra clave.</p>
+    <div class="shot"><img src="capturas/02-ofertas.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Explorar</span>
+    <h2 class="sec-title">Filtrar por ciudad y área</h2>
+    <p class="sec-text">Puede afinar la búsqueda por ciudad, área y tipo de trabajo, y ver cuántas ofertas hay.</p>
+    <div class="shot"><img src="capturas/03-ofertas-filtro.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Registro</span>
+    <h2 class="sec-title">Crear cuenta en un minuto</h2>
+    <p class="sec-text">Registro súper simple: nombre, WhatsApp, ciudad, área y nivel de estudios. Sin trámites ni hojas de vida eternas.</p>
+    <div class="shot"><img src="capturas/05-registro-candidato.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Registro</span>
+    <h2 class="sec-title">Publicar una vacante (gratis)</h2>
+    <p class="sec-text">La empresa publica en 3 pasos, en menos de 5 minutos. No se exige RUT ni cámara de comercio: cualquier negocio o emprendedor puede contratar.</p>
+    <div class="shot"><img src="capturas/06-registro-empresa.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Una vacante</span>
+    <h2 class="sec-title">Cómo la ve alguien sin cuenta</h2>
+    <p class="sec-text">Ve el cargo, la ciudad y el salario, y se le invita a registrarse para postularse. Un anzuelo claro para captar candidatos.</p>
+    <div class="shot"><img src="capturas/09-vacante-anonimo.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Una vacante</span>
+    <h2 class="sec-title">La misma vacante para un suscriptor</h2>
+    <p class="sec-text">Con plan de pago ve todo: la empresa, los requisitos completos y su porcentaje de compatibilidad con el cargo.</p>
+    <div class="shot"><img src="capturas/13-vacante-candidato.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Candidato</span>
+    <h2 class="sec-title">Solo lo que encaja contigo</h2>
+    <p class="sec-text">El candidato no pierde tiempo: recibe una lista corta y personal de vacantes que sí van con su perfil, cada una con su porcentaje de match. Arriba, un acceso destacado a la hoja de vida con IA.</p>
+    <div class="shot"><img src="capturas/10-mis-vacantes.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Candidato</span>
+    <h2 class="sec-title">Su perfil y sus postulaciones</h2>
+    <p class="sec-text">Ve su plan, cuántas postulaciones le quedan y el historial con el estado de cada una.</p>
+    <div class="shot"><img src="capturas/11-perfil.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Empresa</span>
+    <h2 class="sec-title">Candidatos ordenados por compatibilidad</h2>
+    <p class="sec-text">La empresa ve a los candidatos ordenados por porcentaje de match, con contacto directo por WhatsApp y estados (nuevo, contactado, en entrevista, contratado). Una herramienta de decisión, gratis.</p>
+    <div class="shot"><img src="capturas/14-empresa-panel.png" /></div>
+  </section>
+
+  <div class="spot">
+    <span class="kicker">Lo nuevo</span>
+    <h1>Tu hoja de vida y tu LinkedIn, con Inteligencia Artificial</h1>
+    <p>El candidato responde unas preguntas sencillas y la plataforma le arma una hoja de vida profesional y le mejora su perfil de LinkedIn. Puede crear varias versiones según el trabajo que busque. Es un beneficio de los planes de pago: da un motivo fuerte para suscribirse.</p>
+  </div>
+  
+  <section class="page">
+    <span class="kicker">Hoja de vida con IA</span>
+    <h2 class="sec-title">Invitación a suscribirse</h2>
+    <p class="sec-text">A quien está en el plan gratis se le muestra el beneficio y se le invita a subir de plan.</p>
+    <div class="shot"><img src="capturas/12-hoja-de-vida-upsell.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Hoja de vida con IA</span>
+    <h2 class="sec-title">Sus hojas de vida</h2>
+    <p class="sec-text">El suscriptor guarda varias versiones y las vuelve a usar cuando quiera.</p>
+    <div class="shot"><img src="capturas/21-hoja-de-vida-panel.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Hoja de vida con IA</span>
+    <h2 class="sec-title">El asistente, paso a paso</h2>
+    <p class="sec-text">Un flujo guiado y amable: objetivo, experiencia, habilidades, educación. Fácil hasta para quien nunca ha hecho una hoja de vida.</p>
+    <div class="shot"><img src="capturas/22-hv-wizard.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Hoja de vida con IA</span>
+    <h2 class="sec-title">El resultado: CV + LinkedIn listos</h2>
+    <p class="sec-text">En segundos obtiene su hoja de vida redactada y su perfil de LinkedIn optimizado, listos para editar y copiar.</p>
+    <div class="shot"><img src="capturas/23-hv-resultado.png" /></div>
+  </section>
+
+  
+  <section class="page">
+    <span class="kicker">Planes</span>
+    <h2 class="sec-title">Gratis, Camelleitor y Berraco Pro</h2>
+    <p class="sec-text">El candidato elige plan; las empresas siempre gratis. Los planes de pago incluyen la hoja de vida con IA.</p>
+    <div class="shot"><img src="capturas/04-planes.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Confianza</span>
+    <h2 class="sec-title">Cuidamos los datos de la gente</h2>
+    <p class="sec-text">Política de privacidad clara conforme a la ley colombiana: consentimiento, qué se comparte y derecho a borrar la cuenta.</p>
+    <div class="shot"><img src="capturas/08-privacidad.png" /></div>
+  </section>
+
+  <span style="display:block; page-break-before:always"></span>
+  <section class="page"><span class="kicker">Para el equipo</span><h2 class="sec-title">El panel de administración</h2>
+  <p class="sec-text">Además de la experiencia del candidato y la empresa, el equipo de CostaLaboral cuenta con un panel para manejar toda la plataforma: ver el negocio, aprobar empresas, revisar vacantes y llevar el control por roles.</p></section>
+  
+  <section class="page">
+    <span class="kicker">Panel de control</span>
+    <h2 class="sec-title">Todo el negocio de un vistazo</h2>
+    <p class="sec-text">El equipo de CostaLaboral ve cuánta gente se registra, cuántas vacantes hay, la actividad del día y qué tan cerca están de las metas.</p>
+    <div class="shot"><img src="capturas/15-admin-resumen.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Panel de control</span>
+    <h2 class="sec-title">Gestión de candidatos</h2>
+    <p class="sec-text">Buscar personas y activarlas o desactivarlas.</p>
+    <div class="shot"><img src="capturas/16-admin-candidatos.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Panel de control</span>
+    <h2 class="sec-title">Verificar empresas</h2>
+    <p class="sec-text">Una fila de empresas por aprobar, con un botón para verificarlas.</p>
+    <div class="shot"><img src="capturas/17-admin-empresas.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Panel de control</span>
+    <h2 class="sec-title">Revisar y moderar vacantes</h2>
+    <p class="sec-text">Aprobar, rechazar (con motivo) o reportar publicaciones para mantener la calidad.</p>
+    <div class="shot"><img src="capturas/18-admin-vacantes.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Panel de control</span>
+    <h2 class="sec-title">Registro de actividad</h2>
+    <p class="sec-text">Un historial de todo lo que pasa en la plataforma: registros, publicaciones, postulaciones y avisos.</p>
+    <div class="shot"><img src="capturas/19-admin-actividad.png" /></div>
+  </section>
+  <section class="page">
+    <span class="kicker">Panel de control</span>
+    <h2 class="sec-title">Roles del equipo</h2>
+    <p class="sec-text">Permisos por rol (administrador general, administrador y moderador) para trabajar con orden.</p>
+    <div class="shot"><img src="capturas/20-admin-staff.png" /></div>
+  </section>
+
+  <div class="close">
+    <h1>En resumen</h1>
+    <ul>
+      <li>Los candidatos reciben solo lo que encaja con ellos — menos ruido, más resultados.</li>
+      <li>Las empresas publican gratis y ven a los mejores candidatos primero.</li>
+      <li>La hoja de vida con Inteligencia Artificial da una razón fuerte para suscribirse.</li>
+      <li>Un panel de administración para manejar y hacer crecer la plataforma con orden.</li>
+    </ul>
+    <p style="margin-top:26px; opacity:.85; font-size:14px">CostaLaboral · Hecho en la Costa, para la Costa 🌴</p>
+  </div>
+</body></html>
