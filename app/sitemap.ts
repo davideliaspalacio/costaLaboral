@@ -18,19 +18,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absUrl("/terminos"), changeFrequency: "yearly", priority: 0.3 },
   ];
 
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("vacantes")
-    .select("id, creado_en")
-    .eq("activa", true)
-    .neq("estado_moderacion", "rechazada")
-    .limit(2000);
-  const vacantes: MetadataRoute.Sitemap = (data ?? []).map((v) => ({
-    url: absUrl(`/v/${v.id}`),
-    lastModified: new Date(v.creado_en as string),
-    changeFrequency: "daily",
-    priority: 0.8,
-  }));
+  // Las vacantes requieren BD. Si no hay variables/conexión (p. ej. durante el
+  // build en Vercel sin env configuradas), el sitemap se genera igual con lo
+  // estático + blog, y las vacantes entran en la próxima revalidación.
+  let vacantes: MetadataRoute.Sitemap = [];
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const admin = createAdminClient();
+      const { data } = await admin
+        .from("vacantes")
+        .select("id, creado_en")
+        .eq("activa", true)
+        .neq("estado_moderacion", "rechazada")
+        .limit(2000);
+      vacantes = (data ?? []).map((v) => ({
+        url: absUrl(`/v/${v.id}`),
+        lastModified: new Date(v.creado_en as string),
+        changeFrequency: "daily",
+        priority: 0.8,
+      }));
+    } catch {
+      // Sin conexión a la BD durante el build: se omiten las vacantes.
+    }
+  }
 
   // Artículos del blog (definidos por el módulo de blog).
   const posts: MetadataRoute.Sitemap = getPostsBlog().map((p) => ({
