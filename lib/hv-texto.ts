@@ -1,9 +1,8 @@
-import type { ContenidoHV, LinkedInHV } from "@/lib/ai";
+import type { ContenidoHV, ExperienciaLinkedIn } from "@/lib/ia/tipos";
 
 /* ============================================================
-   Serialización a texto plano de una hoja de vida y del bloque
-   de LinkedIn, para el botón "Copiar". Pura (sin server-only) para
-   poder usarse tanto en cliente como en servidor.
+   Serialización a texto plano para los botones "Copiar". Pura (sin
+   server-only) para usarse en cliente y servidor.
    ============================================================ */
 
 export function cvATexto(
@@ -55,6 +54,12 @@ export function cvATexto(
   return l.join("\n").trim();
 }
 
-export function linkedInATexto(linkedin: LinkedInHV): string {
-  return [`TITULAR:\n${linkedin.titular}`, "", `ACERCA DE:\n${linkedin.acerca}`].join("\n").trim();
+export function listaATexto(items: string[] | undefined, separador = "\n"): string {
+  return (items ?? []).filter(Boolean).join(separador);
+}
+
+export function experienciasLinkedInATexto(exps: ExperienciaLinkedIn[] | undefined): string {
+  return (exps ?? [])
+    .map((e) => [[e.cargo, e.empresa].filter(Boolean).join(" — "), e.descripcion].filter(Boolean).join("\n"))
+    .join("\n\n");
 }

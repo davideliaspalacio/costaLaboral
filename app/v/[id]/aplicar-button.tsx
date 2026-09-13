@@ -1,114 +1,105 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { postularse } from "@/lib/actions/postulacion";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Textarea, Field } from "@/components/ui/input";
-import { CheckCircle2, AlertTriangle, Lock } from "lucide-react";
+import type { Fuente } from "@/lib/constants";
 
-type Resultado =
-  | { tipo: "ok" }
-  | { tipo: "limite" }
-  | { tipo: "ya_postulado" }
-  | { tipo: "cerrada" }
-  | { tipo: "generico" }
-  | null;
+type ErrorPostulacion = "ya_postulado" | "cerrada" | "limite_tasa" | "generico";
+
+const MENSAJE_ERROR: Record<ErrorPostulacion, string> = {
+  ya_postulado: "Ya te postulaste a esta vacante.",
+  cerrada: "Esta vacante ya no recibe postulaciones.",
+  limite_tasa: "Has enviado muchas postulaciones seguidas. Tómate un respiro e intenta de nuevo en un rato.",
+  generico: "No pudimos enviar tu postulación. Intenta de nuevo.",
+};
 
 export function AplicarButton({
   vacanteId,
-  puedeAplicar,
-  yaPostulado,
-  activo,
+  fuente,
+  abierta,
+  estadoPostulacion,
 }: {
   vacanteId: string;
-  puedeAplicar: boolean;
-  yaPostulado: boolean;
-  activo: boolean;
+  fuente: Fuente;
+  /** La vacante es pública y recibe postulaciones. */
+  abierta: boolean;
+  /** Etiqueta para el candidato del estado de su postulación, si ya se postuló. */
+  estadoPostulacion: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [mensaje, setMensaje] = useState("");
-  const [resultado, setResultado] = useState<Resultado>(null);
+  const [enviada, setEnviada] = useState(false);
+  const [error, setError] = useState<ErrorPostulacion | null>(null);
 
-  // Ya se postuló antes: estado bloqueado.
-  if (yaPostulado || resultado?.tipo === "ok") {
+  if (estadoPostulacion || enviada) {
     return (
-      <div className="rounded-xl bg-success-50 px-4 py-3 text-center">
-        <p className="flex items-center justify-center gap-2 text-sm font-semibold text-success-600">
+      <div className="rounded-xl border-2 border-ink bg-success-50 px-4 py-3 text-center">
+        <p className="flex items-center justify-center gap-2 text-sm font-bold text-success-600">
           <CheckCircle2 className="h-4 w-4" />
-          {resultado?.tipo === "ok" ? "¡Postulación enviada! 🎉" : "Ya aplicaste"}
+          {enviada && !estadoPostulacion ? "¡Postulación enviada!" : "Ya te postulaste"}
         </p>
-        <p className="mt-1 text-xs text-ink-soft">Te avisaremos por WhatsApp si la empresa te contacta.</p>
+        {estadoPostulacion && (
+          <p className="mt-1 text-sm text-ink-soft">
+            Estado: <span className="font-bold text-ink">{estadoPostulacion}</span>
+          </p>
+        )}
       </div>
     );
   }
 
+  if (!abierta) {
+    return (
+      <p className="flex items-center gap-2 rounded-xl border-2 border-ink bg-warn-50 px-4 py-3 text-sm font-bold text-ink">
+        <AlertTriangle className="h-4 w-4 shrink-0" /> Esta vacante ya no recibe postulaciones.
+      </p>
+    );
+  }
+
   function aplicar() {
-    setResultado(null);
+    setError(null);
     startTransition(async () => {
-      const r = await postularse(vacanteId, mensaje);
+      const r = await postularse(vacanteId, { mensaje: mensaje.trim() || undefined, fuente });
       if ("ok" in r) {
-        setResultado({ tipo: "ok" });
+        setEnviada(true);
         router.refresh();
       } else {
-        setResultado({ tipo: r.error });
+        setError(r.error);
       }
     });
   }
 
-  const bloqueado = !activo || !puedeAplicar;
-
   return (
     <div className="space-y-3">
-      {activo && puedeAplicar && (
-        <Field label="Mensaje para la empresa (opcional)" htmlFor="mensaje-aplicar">
-          <Textarea
-            id="mensaje-aplicar"
-            value={mensaje}
-            onChange={(e) => setMensaje(e.target.value)}
-            placeholder="Cuéntale por qué eres la persona ideal para el cargo…"
-            className="min-h-20"
-            maxLength={500}
-          />
-        </Field>
-      )}
+      <Field label="Mensaje para la empresa (opcional)" htmlFor="mensaje-aplicar">
+        <Textarea
+          id="mensaje-aplicar"
+          value={mensaje}
+          onChange={(e) => setMensaje(e.target.value)}
+          placeholder="Cuéntale por qué eres la persona indicada para el cargo…"
+          className="min-h-20"
+          maxLength={500}
+        />
+      </Field>
 
-      <Button
-        type="button"
-        size="lg"
-        block
-        variant="accent"
-        disabled={bloqueado || pending}
-        onClick={aplicar}
-      >
-        {pending ? "Enviando…" : bloqueado ? "Postulación no disponible" : "Aplicar ahora"}
+      <Button type="button" size="lg" block variant="accent" disabled={pending} onClick={aplicar}>
+        {pending ? "Enviando…" : "Postularme gratis"}
       </Button>
 
-      {resultado?.tipo === "limite" && (
-        <div className="rounded-xl bg-accent-50 px-4 py-3 text-sm">
-          <p className="flex items-center gap-2 font-semibold text-accent-700">
-            <Lock className="h-4 w-4" />
-            Alcanzaste tu límite de postulaciones
-          </p>
-          <p className="mt-1 text-ink-soft">Mejora tu plan para seguir aplicando sin límites.</p>
-          <Link href="/planes" className={buttonVariants({ variant: "accent", size: "sm", block: true, className: "mt-3" })}>
-            Ver planes
-          </Link>
-        </div>
-      )}
-      {resultado?.tipo === "ya_postulado" && (
-        <p className="rounded-xl bg-brand-50 px-4 py-2.5 text-sm font-medium text-brand-700">Ya te postulaste a esta vacante.</p>
-      )}
-      {resultado?.tipo === "cerrada" && (
-        <p className="flex items-center gap-2 rounded-xl bg-warn-50 px-4 py-2.5 text-sm font-medium text-warn-500">
-          <AlertTriangle className="h-4 w-4" /> Esta vacante ya cerró.
-        </p>
-      )}
-      {resultado?.tipo === "generico" && (
-        <p className="rounded-xl bg-danger-50 px-4 py-2.5 text-sm font-medium text-danger-500">
-          No pudimos enviar tu postulación. Intenta de nuevo.
+      {error && (
+        <p
+          role="alert"
+          className={
+            error === "generico"
+              ? "rounded-xl border-2 border-ink bg-danger-50 px-4 py-2.5 text-sm font-semibold text-danger-600"
+              : "rounded-xl border-2 border-ink bg-sol-100 px-4 py-2.5 text-sm font-semibold text-ink"
+          }
+        >
+          {MENSAJE_ERROR[error] ?? MENSAJE_ERROR.generico}
         </p>
       )}
     </div>

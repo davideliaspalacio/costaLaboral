@@ -12,11 +12,14 @@ export function Pagination({
   totalPaginas,
   baseParams,
   basePath,
+  param = "page",
 }: {
   page: number;
   totalPaginas: number;
   baseParams: Record<string, string | undefined>;
   basePath: string;
+  /** Nombre del searchParam de página (para varias tablas en la misma ruta). */
+  param?: string;
 }) {
   if (totalPaginas <= 1) return null;
 
@@ -25,7 +28,7 @@ export function Pagination({
     for (const [k, v] of Object.entries(baseParams)) {
       if (v) usp.set(k, v);
     }
-    usp.set("page", String(p));
+    usp.set(param, String(p));
     return `${basePath}?${usp.toString()}`;
   }
 

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShieldAlert, ShieldCheck, Home } from "lucide-react";
 import { getUsuario } from "@/lib/auth";
-import { getStaff, puede, ROL_LABEL } from "@/lib/roles";
+import { getStaff, puede, ROL_LABEL, type Permiso } from "@/lib/roles";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -11,7 +11,23 @@ import { AdminSidebarNav, AdminTabsNav, type NavItem } from "@/components/admin/
 
 export const metadata = {
   title: "Administración · CostaLaboral",
+  robots: { index: false, follow: false },
 };
+
+const SECCIONES: (NavItem & { permiso: Permiso })[] = [
+  { href: "/admin", label: "Resumen", icon: "resumen", permiso: "ver" },
+  { href: "/admin/kpis", label: "KPIs", icon: "kpis", permiso: "ver_kpis" },
+  { href: "/admin/vacantes", label: "Vacantes", icon: "vacantes", permiso: "moderar" },
+  { href: "/admin/reportes", label: "Reportes", icon: "reportes", permiso: "moderar" },
+  { href: "/admin/empresas", label: "Empresas", icon: "empresas", permiso: "ver" },
+  { href: "/admin/candidatos", label: "Candidatos", icon: "candidatos", permiso: "ver" },
+  { href: "/admin/solicitudes", label: "Solicitudes", icon: "solicitudes", permiso: "atender_solicitudes" },
+  { href: "/admin/pagos", label: "Pagos", icon: "pagos", permiso: "ver_pagos" },
+  { href: "/admin/ia", label: "Uso de IA", icon: "ia", permiso: "ver_ia" },
+  { href: "/admin/auditoria", label: "Auditoría", icon: "auditoria", permiso: "ver_auditoria" },
+  { href: "/admin/actividad", label: "Actividad", icon: "actividad", permiso: "ver" },
+  { href: "/admin/staff", label: "Staff", icon: "staff", permiso: "gestionar_staff" },
+];
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const staff = await getStaff();
@@ -30,12 +46,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               <ShieldAlert className="h-7 w-7" />
             </span>
             <div>
-              <h1 className="font-display text-xl font-extrabold tracking-tight text-ink">
-                Acceso restringido
-              </h1>
+              <h1 className="font-display text-xl font-extrabold tracking-tight text-ink">Acceso restringido</h1>
               <p className="mt-2 text-sm text-ink-soft">
-                La administración es solo para el equipo de CostaLaboral. Tu cuenta no tiene
-                permisos para verla.
+                La administración es solo para el equipo de CostaLaboral. Tu cuenta no tiene permisos para verla.
               </p>
             </div>
             <Link href="/" className={buttonVariants({ variant: "primary", size: "md" })}>
@@ -47,16 +60,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     );
   }
 
-  const items: NavItem[] = [
-    { href: "/admin", label: "Resumen", icon: "resumen" },
-    { href: "/admin/candidatos", label: "Candidatos", icon: "candidatos" },
-    { href: "/admin/empresas", label: "Empresas", icon: "empresas" },
-    { href: "/admin/vacantes", label: "Vacantes", icon: "vacantes" },
-    { href: "/admin/actividad", label: "Actividad", icon: "actividad" },
-  ];
-  if (puede(staff.rol, "gestionar_staff")) {
-    items.push({ href: "/admin/staff", label: "Staff", icon: "staff" });
-  }
+  const items: NavItem[] = SECCIONES.filter((s) => puede(staff.rol, s.permiso)).map(({ permiso: _p, ...item }) => item);
 
   return (
     <div className="container-page py-6 sm:py-10">
@@ -80,10 +84,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               </div>
             </div>
             <AdminSidebarNav items={items} />
-            <Link
-              href="/"
-              className={buttonVariants({ variant: "ghost", size: "sm", block: true })}
-            >
+            <Link href="/" className={buttonVariants({ variant: "ghost", size: "sm", block: true })}>
               <Home className="h-4 w-4" /> Ir al sitio
             </Link>
           </div>

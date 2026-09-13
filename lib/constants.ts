@@ -1,18 +1,12 @@
 /* ============================================================
-   Constantes de dominio de CostaLaboral (Fase 1)
-   Fuente: Documento Técnico MVP.
+   Constantes de dominio de CostaLaboral — Especificación MVP v2.
+   Precios y productos viven en lib/billing/catalogo.ts; los
+   beneficios por plan en lib/entitlements.ts (catálogo separado
+   de reglas de beneficios, sección 9 de la spec).
    ============================================================ */
 
-export const CIUDADES = [
-  "Barranquilla",
-  "Cartagena",
-  "Santa Marta",
-  "Montería",
-  "Sincelejo",
-  "Valledupar",
-  "Riohacha",
-  "Soledad",
-] as const;
+/** Ciudades del piloto (sección 18: Barranquilla, Cartagena y Santa Marta). */
+export const CIUDADES = ["Barranquilla", "Cartagena", "Santa Marta"] as const;
 export type Ciudad = (typeof CIUDADES)[number];
 
 export const AREAS = [
@@ -55,105 +49,138 @@ export function rankNivel(nivel: string): number {
   return NIVELES_EDUCATIVOS.find((n) => n.value === nivel)?.rank ?? 0;
 }
 
+/** Dónde se trabaja. */
 export const MODALIDADES = [
   { value: "presencial", label: "Presencial" },
   { value: "remoto", label: "Remoto" },
   { value: "hibrido", label: "Híbrido" },
-  { value: "medio_tiempo", label: "Medio tiempo" },
-  { value: "por_dias", label: "Por días" },
 ] as const;
 export type Modalidad = (typeof MODALIDADES)[number]["value"];
 
+/** Tipo de empleo / jornada (filtro "tipo" del portal). */
+export const TIPOS_EMPLEO = [
+  { value: "tiempo_completo", label: "Tiempo completo" },
+  { value: "medio_tiempo", label: "Medio tiempo" },
+  { value: "por_dias", label: "Por días" },
+  { value: "temporal", label: "Temporal" },
+  { value: "practicas", label: "Prácticas" },
+] as const;
+export type TipoEmpleo = (typeof TIPOS_EMPLEO)[number]["value"];
+
+/**
+ * Disponibilidad. En el candidato: cuándo puede empezar.
+ * En la vacante (disponibilidad_requerida): a más tardar cuándo debe empezar.
+ */
 export const DISPONIBILIDAD = [
-  { value: "inmediata", label: "Inmediata" },
-  { value: "en_2_semanas", label: "En 2 semanas" },
-  { value: "en_1_mes", label: "En 1 mes" },
+  { value: "inmediata", label: "Inmediata", rank: 1 },
+  { value: "en_2_semanas", label: "En 2 semanas", rank: 2 },
+  { value: "en_1_mes", label: "En 1 mes", rank: 3 },
 ] as const;
 export type Disponibilidad = (typeof DISPONIBILIDAD)[number]["value"];
 
-export const ESTADOS_POSTULACION = [
-  { value: "enviada", label: "Enviada", color: "bg-brand-50 text-brand-700" },
-  { value: "vista_empresa", label: "Vista por empresa", color: "bg-amber-50 text-amber-700" },
-  { value: "en_proceso", label: "En proceso", color: "bg-indigo-50 text-indigo-700" },
-  { value: "seleccionado", label: "Seleccionado", color: "bg-success-50 text-success-600" },
-  { value: "rechazado", label: "No seleccionado", color: "bg-slate-100 text-slate-600" },
+export function rankDisponibilidad(d: string): number {
+  return DISPONIBILIDAD.find((x) => x.value === d)?.rank ?? 0;
+}
+
+/* ---------------- Vacantes ---------------- */
+
+export const ESTADOS_VACANTE = [
+  { value: "borrador", label: "Borrador" },
+  { value: "publicada", label: "Publicada" },
+  { value: "pausada", label: "Pausada" },
+  { value: "cerrada", label: "Cerrada" },
 ] as const;
+export type EstadoVacante = (typeof ESTADOS_VACANTE)[number]["value"];
+
+export const ESTADOS_MODERACION = ["pendiente", "aprobada", "rechazada", "reportada"] as const;
+export type EstadoModeracion = (typeof ESTADOS_MODERACION)[number];
+
+export const MOTIVOS_CIERRE = [
+  { value: "contratado", label: "Ya contraté" },
+  { value: "cerrada", label: "Cerrada" },
+  { value: "expirada", label: "Expirada" },
+] as const;
+export type MotivoCierre = (typeof MOTIVOS_CIERRE)[number]["value"];
+
+export const MOTIVOS_REPORTE = [
+  { value: "fraude", label: "Parece un fraude o estafa" },
+  { value: "cobro_al_candidato", label: "Piden dinero al candidato" },
+  { value: "discriminatoria", label: "Contenido discriminatorio" },
+  { value: "datos_falsos", label: "Datos falsos o engañosos" },
+  { value: "ya_no_existe", label: "La vacante ya no existe" },
+  { value: "otro", label: "Otro motivo" },
+] as const;
+export type MotivoReporte = (typeof MOTIVOS_REPORTE)[number]["value"];
+
+/** Reportes abiertos de usuarios distintos que ocultan la vacante hasta revisión. */
+export const REPORTES_PARA_OCULTAR = 3;
+
+export const VACANTE_EXPIRA_DIAS = 60;
+
+/* ---------------- Postulaciones (un solo estado) ---------------- */
+
+export type TonoEstado = "brand" | "accent" | "sol" | "success" | "warn" | "danger" | "neutral" | "outline" | "ink";
+
+export const ESTADOS_POSTULACION = [
+  { value: "enviada", label: "Nueva", labelCandidato: "Enviada", tono: "brand" },
+  { value: "vista", label: "Vista", labelCandidato: "Vista por la empresa", tono: "sol" },
+  { value: "contactado", label: "Contactado", labelCandidato: "Te contactaron", tono: "accent" },
+  { value: "en_entrevista", label: "En entrevista", labelCandidato: "En entrevista", tono: "accent" },
+  { value: "contratado", label: "Contratado", labelCandidato: "Contratado", tono: "success" },
+  { value: "descartado", label: "Descartado", labelCandidato: "No seleccionado", tono: "neutral" },
+  { value: "retirada", label: "Retirada", labelCandidato: "Retiraste la postulación", tono: "outline" },
+] as const satisfies readonly { value: string; label: string; labelCandidato: string; tono: TonoEstado }[];
 export type EstadoPostulacion = (typeof ESTADOS_POSTULACION)[number]["value"];
 
-/** Estados de seguimiento del candidato en el panel de empresa (5.5.1). */
-export const ESTADOS_SEGUIMIENTO = [
-  { value: "nuevo", label: "Nuevo" },
-  { value: "contactado", label: "Contactado" },
-  { value: "en_entrevista", label: "En entrevista" },
-  { value: "contratado", label: "Contratado" },
-  { value: "descartado", label: "Descartado" },
-] as const;
+/** Estados que la empresa puede asignar desde el pipeline. */
+export const ESTADOS_PIPELINE_EMPRESA: EstadoPostulacion[] = [
+  "enviada",
+  "vista",
+  "contactado",
+  "en_entrevista",
+  "contratado",
+  "descartado",
+];
 
-/* ---------------- Planes (modelo de negocio) ---------------- */
+export function estadoPostulacionInfo(value: string) {
+  return ESTADOS_POSTULACION.find((e) => e.value === value) ?? ESTADOS_POSTULACION[0];
+}
+
+/** De dónde llegó el candidato a la vacante (KPIs de CTR y conversión). */
+export const FUENTES = ["recomendacion", "busqueda", "whatsapp", "directo", "compartido"] as const;
+export type Fuente = (typeof FUENTES)[number];
+
+export function normalizarFuente(v: string | null | undefined): Fuente {
+  return (FUENTES as readonly string[]).includes(v ?? "") ? (v as Fuente) : "directo";
+}
+
+/* ---------------- Planes ---------------- */
+
 export type PlanId = "gratis" | "camelleitor" | "berraco_pro";
+export type PlanEmpresaId = "gratis" | "pro";
 
-export const PLANES: Record<
-  PlanId,
-  {
-    id: PlanId;
-    nombre: string;
-    precio: number; // COP por 90 días
-    postulaciones: number | null; // null = ilimitado
-    destacado?: boolean;
-    tagline: string;
-    beneficios: string[];
-  }
-> = {
-  gratis: {
-    id: "gratis",
-    nombre: "Gratis",
-    precio: 0,
-    postulaciones: 3,
-    tagline: "Empieza a buscar camello sin pagar nada.",
-    beneficios: [
-      "3 postulaciones cada 90 días",
-      "Vacantes que encajan con tu perfil",
-      "Notificaciones por WhatsApp",
-      "Ve cargo, ciudad y salario",
-    ],
-  },
-  camelleitor: {
-    id: "camelleitor",
-    nombre: "Camelleitor",
-    precio: 29900,
-    postulaciones: 15,
-    destacado: true,
-    tagline: "Para el que va en serio con la búsqueda.",
-    beneficios: [
-      "15 postulaciones cada 90 días",
-      "Ves la empresa y todos los requisitos",
-      "Asistente de hoja de vida con IA",
-      "Prioridad sobre el plan gratis",
-    ],
-  },
-  berraco_pro: {
-    id: "berraco_pro",
-    nombre: "Berraco Pro",
-    precio: 49900,
-    postulaciones: null,
-    tagline: "Sin límites. El combo completo.",
-    beneficios: [
-      "Postulaciones ilimitadas",
-      "Hoja de vida + LinkedIn con IA (ilimitado)",
-      "% de match con inteligencia artificial",
-      "Etiqueta de Prioridad 2h y quién vio tu perfil",
-    ],
-  },
+export const PLAN_NOMBRE: Record<PlanId, string> = {
+  gratis: "Gratis",
+  camelleitor: "Camelleitor",
+  berraco_pro: "Berraco Pro",
 };
 
-export const PLAN_DURACION_DIAS = 90;
+export const PLAN_EMPRESA_NOMBRE: Record<PlanEmpresaId, string> = {
+  gratis: "Gratis",
+  pro: "Empresa Pro",
+};
 
-/* Ponderaciones del score de match — Fase 1 (sección 5.5.2) */
+/* ---------------- Match (sección 4) ---------------- */
+
 export const PESO_MATCH = {
   ciudad: 40,
   area: 30,
-  nivel: 20,
+  educacion: 20,
   disponibilidad: 10,
 } as const;
 
-export const VACANTE_EXPIRA_DIAS = 60;
+/** Versión de las reglas del score; se guarda con cada detalle para reproducibilidad. */
+export const MATCH_VERSION = "v2-2026-09";
+
+/** Score mínimo para recomendar una vacante (feed y notificaciones). */
+export const UMBRAL_RECOMENDACION = 60;

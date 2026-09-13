@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { absUrl } from "@/lib/seo";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getVacantesParaSitemap } from "@/lib/data/ofertas";
 import { getPostsBlog } from "@/lib/blog/posts";
 
 export const revalidate = 3600;
@@ -16,24 +16,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absUrl("/login"), changeFrequency: "yearly", priority: 0.3 },
     { url: absUrl("/privacidad"), changeFrequency: "yearly", priority: 0.3 },
     { url: absUrl("/terminos"), changeFrequency: "yearly", priority: 0.3 },
+    { url: absUrl("/datos-personales"), changeFrequency: "yearly", priority: 0.3 },
   ];
 
-  // Las vacantes requieren BD. Si no hay variables/conexión (p. ej. durante el
-  // build en Vercel sin env configuradas), el sitemap se genera igual con lo
-  // estático + blog, y las vacantes entran en la próxima revalidación.
+  // Solo vacantes públicas (publicada + aprobada) y sin expirar. Si no hay
+  // variables/conexión (p. ej. build sin env), se genera con lo estático + blog.
   let vacantes: MetadataRoute.Sitemap = [];
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
-      const admin = createAdminClient();
-      const { data } = await admin
-        .from("vacantes")
-        .select("id, creado_en")
-        .eq("activa", true)
-        .neq("estado_moderacion", "rechazada")
-        .limit(2000);
-      vacantes = (data ?? []).map((v) => ({
+      vacantes = (await getVacantesParaSitemap()).map((v) => ({
         url: absUrl(`/v/${v.id}`),
-        lastModified: new Date(v.creado_en as string),
+        lastModified: new Date(v.actualizada_en),
         changeFrequency: "daily",
         priority: 0.8,
       }));
@@ -42,7 +35,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  // Artículos del blog (definidos por el módulo de blog).
   const posts: MetadataRoute.Sitemap = getPostsBlog().map((p) => ({
     url: absUrl(`/blog/${p.slug}`),
     lastModified: new Date(p.fecha),

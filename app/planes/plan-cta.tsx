@@ -1,82 +1,51 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { CheckCircle2 } from "lucide-react";
-import { activarPlan } from "@/lib/actions/candidato";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import type { PlanId } from "@/lib/constants";
+import { ArrowRight } from "lucide-react";
+import { iniciarCompra } from "@/lib/actions/pagos";
+import { Button } from "@/components/ui/button";
+import type { ProductoCodigo } from "@/lib/billing/catalogo";
 
-/**
- * Botón de acción de cada tarjeta de plan.
- * - Plan gratis: enlaza al registro (no activa nada).
- * - Planes pagos: simula la activación (Fase 2 usará Wompi) con estado en vivo.
- */
-export function PlanCta({
-  plan,
-  destacado,
+/** Navega al checkout: interno con el router, externo (Wompi) con recarga completa. */
+export function irAlCheckout(router: ReturnType<typeof useRouter>, url: string) {
+  if (/^https?:\/\//.test(url)) window.location.assign(url);
+  else router.push(url);
+}
+
+/** Botón de compra: crea el pago pendiente y lleva al checkout del proveedor. */
+export function ComprarBoton({
+  producto,
+  label,
+  variant = "primary",
+  vacanteId,
 }: {
-  plan: PlanId;
-  destacado?: boolean;
+  producto: ProductoCodigo;
+  label: string;
+  variant?: "primary" | "accent" | "brand" | "sol" | "outline";
+  vacanteId?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [ok, setOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (plan === "gratis") {
-    return (
-      <Link
-        href="/registro-candidato"
-        className={cn(buttonVariants({ variant: "outline", size: "lg", block: true }))}
-      >
-        Empezar gratis
-      </Link>
-    );
-  }
-
-  function onActivar() {
+  function onComprar() {
     setError(null);
     startTransition(async () => {
-      const res = await activarPlan(plan);
-      if (res?.ok) {
-        setOk(true);
-        router.refresh();
-      } else if (res?.error) {
-        setError(res.error);
-      }
+      const res = await iniciarCompra(producto, vacanteId ? { vacanteId } : undefined);
+      if ("url" in res) irAlCheckout(router, res.url);
+      else setError(res.error);
     });
-  }
-
-  if (ok) {
-    return (
-      <p
-        role="status"
-        className="flex items-center justify-center gap-2 rounded-xl bg-success-50 px-4 py-3 text-sm font-semibold text-success-600"
-      >
-        <CheckCircle2 className="h-5 w-5" />
-        ¡Plan activado!
-      </p>
-    );
   }
 
   return (
     <div className="space-y-2">
-      <Button
-        type="button"
-        variant={destacado ? "accent" : "primary"}
-        size="lg"
-        block
-        onClick={onActivar}
-        disabled={pending}
-        aria-busy={pending}
-      >
-        {pending ? "Activando…" : "Activar plan de prueba"}
+      <Button type="button" variant={variant} size="lg" block onClick={onComprar} disabled={pending} aria-busy={pending}>
+        {pending ? "Preparando pago…" : label}
+        {!pending && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
       </Button>
       {error && (
-        <p role="alert" className="text-center text-sm font-medium text-danger-500">
+        <p role="alert" className="rounded-xl border-2 border-ink bg-danger-50 px-3 py-2 text-center text-sm font-semibold text-danger-600">
           {error}
         </p>
       )}

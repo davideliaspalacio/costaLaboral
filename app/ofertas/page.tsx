@@ -1,95 +1,57 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Search, SlidersHorizontal, Compass, MapPin, Briefcase, X, ArrowRight, ArrowLeft } from "lucide-react";
-import { buscarOfertas, OFERTAS_POR_PAGINA } from "@/lib/data/ofertas";
+import { Search, SlidersHorizontal, Compass, MapPin, Briefcase, Clock, X, ArrowRight, ArrowLeft, Star } from "lucide-react";
+import {
+  buscarOfertas,
+  hrefOfertas,
+  parsearFiltrosOfertas,
+  type ClaveFiltro,
+  type FiltrosOfertas,
+} from "@/lib/data/ofertas";
 import { VacanteCard } from "@/components/vacante/vacante-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { buttonVariants } from "@/components/ui/button";
-import { AREAS, CIUDADES, MODALIDADES } from "@/lib/constants";
+import { Select } from "@/components/ui/input";
+import { AREAS, CIUDADES, MODALIDADES, TIPOS_EMPLEO } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { buildMetadata } from "@/lib/seo";
 
-const labelArea = (v: string) => AREAS.find((a) => a.value === v)?.label ?? v;
-const labelModalidad = (v: string) => MODALIDADES.find((m) => m.value === v)?.label ?? v;
+type OfertasSearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-/** Toma un valor de searchParams (posible string[]) y devuelve el primero. */
-function primer(v: string | string[] | undefined): string {
-  return (Array.isArray(v) ? v[0] : v)?.trim() ?? "";
-}
+const labelDe = (lista: readonly { value: string; label: string }[], v: string) =>
+  lista.find((x) => x.value === v)?.label ?? v;
 
-type OfertasSearchParams = {
-  q?: string | string[];
-  ciudad?: string | string[];
-  area?: string | string[];
-  modalidad?: string | string[];
-  page?: string | string[];
-};
+const hrefFicha = (id: string) => `/v/${id}?src=busqueda`;
 
-export async function generateMetadata({
-  searchParams,
-}: {
-  searchParams: Promise<OfertasSearchParams>;
-}): Promise<Metadata> {
-  const sp = await searchParams;
-  const q = primer(sp.q);
-  if (q) {
+export async function generateMetadata({ searchParams }: { searchParams: OfertasSearchParams }): Promise<Metadata> {
+  const f = parsearFiltrosOfertas(await searchParams);
+  if (f.q) {
     return buildMetadata({
-      title: `Búsqueda: ${q} · Ofertas`,
-      description: `Resultados de "${q}" en las ofertas de empleo del Caribe colombiano.`,
+      title: `Búsqueda: ${f.q} · Ofertas`,
+      description: `Resultados de "${f.q}" en las ofertas de empleo del Caribe colombiano.`,
       path: "/ofertas",
       noindex: true,
     });
   }
-  const area = AREAS.find((a) => a.value === primer(sp.area))?.label;
-  const ciudadVal = CIUDADES.includes(primer(sp.ciudad) as (typeof CIUDADES)[number]) ? primer(sp.ciudad) : "";
-  const modVal = MODALIDADES.find((m) => m.value === primer(sp.modalidad))?.value;
-
+  const area = f.area ? labelDe(AREAS, f.area) : "";
   const t = ["Empleos"];
   if (area) t.push(`de ${area}`);
-  t.push(ciudadVal ? `en ${ciudadVal}` : "en la Costa");
-  const description = `Vacantes ${area ? `de ${area} ` : ""}${ciudadVal ? `en ${ciudadVal}` : "en el Caribe colombiano"}, actualizadas y gratis. Postúlate por WhatsApp en CostaLaboral.`;
-
-  const qs = new URLSearchParams();
-  if (area) qs.set("area", primer(sp.area));
-  if (ciudadVal) qs.set("ciudad", ciudadVal);
-  if (modVal) qs.set("modalidad", modVal);
-  const path = qs.toString() ? `/ofertas?${qs.toString()}` : "/ofertas";
-
-  return buildMetadata({ title: t.join(" "), description, path, image: "/opengraph-image" });
+  t.push(f.ciudad ? `en ${f.ciudad}` : "en la Costa");
+  const description = `Vacantes ${area ? `de ${area} ` : ""}${f.ciudad ? `en ${f.ciudad}` : "en el Caribe colombiano"} con empresa y salario visibles. Postúlate gratis en CostaLaboral.`;
+  return buildMetadata({
+    title: t.join(" "),
+    description,
+    path: hrefOfertas({ ...f, q: "" }),
+    image: "/opengraph-image",
+  });
 }
 
-export default async function OfertasPage({
-  searchParams,
-}: {
-  searchParams: Promise<OfertasSearchParams>;
-}) {
-  const sp = await searchParams;
-  const q = primer(sp.q);
-  const ciudad = CIUDADES.includes(primer(sp.ciudad) as (typeof CIUDADES)[number])
-    ? primer(sp.ciudad)
-    : "";
-  const area = AREAS.some((a) => a.value === primer(sp.area)) ? primer(sp.area) : "";
-  const modalidad = MODALIDADES.some((m) => m.value === primer(sp.modalidad))
-    ? primer(sp.modalidad)
-    : "";
-  const page = Math.max(1, Number.parseInt(primer(sp.page), 10) || 1);
-
-  const { items, total } = await buscarOfertas({ q, ciudad, area, modalidad, page });
-
-  const totalPaginas = Math.max(1, Math.ceil(total / OFERTAS_POR_PAGINA));
-  const hayFiltros = Boolean(q || ciudad || area || modalidad);
-
-  // Construye un querystring conservando los filtros vigentes y sobre-escribiendo `page`.
-  const hrefPagina = (p: number) => {
-    const params = new URLSearchParams();
-    if (q) params.set("q", q);
-    if (ciudad) params.set("ciudad", ciudad);
-    if (area) params.set("area", area);
-    if (modalidad) params.set("modalidad", modalidad);
-    if (p > 1) params.set("page", String(p));
-    const qs = params.toString();
-    return qs ? `/ofertas?${qs}` : "/ofertas";
-  };
+export default async function OfertasPage({ searchParams }: { searchParams: OfertasSearchParams }) {
+  const filtros = parsearFiltrosOfertas(await searchParams);
+  const { q, ciudad, area, tipo, modalidad } = filtros;
+  const { destacadas, items, total, page, totalPaginas } = await buscarOfertas(filtros);
+  const hayFiltros = Boolean(q || ciudad || area || tipo || modalidad);
+  const hayResultados = destacadas.length > 0 || items.length > 0;
 
   return (
     <>
@@ -97,103 +59,72 @@ export default async function OfertasPage({
       <section className="border-b-2 border-ink bg-sol-300">
         <div className="container-page py-12 sm:py-14">
           <span className="kicker bg-surface">
-            <Compass className="h-3.5 w-3.5" /> Vitrina de empleo · toda la Costa
+            <Compass className="h-3.5 w-3.5" /> Barranquilla · Cartagena · Santa Marta
           </span>
           <h1 className="mt-5 font-display text-4xl font-extrabold leading-[0.95] text-ink sm:text-5xl">
-            Todas las ofertas de la Costa
+            Ofertas de empleo en la Costa
           </h1>
           <p className="mt-4 max-w-2xl text-lg font-medium text-ink-soft">
-            Léelas todas a tu ritmo. Busca por palabra clave o filtra por ciudad, área y modalidad
-            para encontrar el camello que va contigo.
+            Todas abiertas: ves la empresa, el salario y los requisitos. Postularte es gratis.
           </p>
 
-          {/* Formulario de búsqueda (GET, sin JS) */}
+          {/* Formulario de búsqueda (GET, sin JS): los filtros viven en la URL */}
           <form
             method="GET"
             action="/ofertas"
             className="mt-8 rounded-2xl border-2 border-ink bg-surface p-4 shadow-[var(--shadow-sticker)] sm:p-5"
           >
-            <div className="grid gap-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr_auto]">
-              <label className="relative block">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr_1fr_auto]">
+              <label className="relative block sm:col-span-2 lg:col-span-1">
                 <span className="sr-only">Buscar por palabra clave</span>
                 <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
                 <input
                   type="search"
                   name="q"
                   defaultValue={q}
+                  maxLength={80}
                   placeholder="Cargo, palabra clave…"
                   className="input-base pl-11"
-                  aria-label="Buscar por palabra clave"
                 />
               </label>
 
-              <label className="block">
-                <span className="sr-only">Ciudad</span>
-                <select
-                  name="ciudad"
-                  defaultValue={ciudad}
-                  aria-label="Filtrar por ciudad"
-                  className="input-base appearance-none bg-[right_1rem_center] pr-10"
-                  style={{
-                    backgroundImage:
-                      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                >
-                  <option value="">Toda la Costa</option>
-                  {CIUDADES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <Select name="ciudad" defaultValue={ciudad} aria-label="Filtrar por ciudad">
+                <option value="">Toda la Costa</option>
+                {CIUDADES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
 
-              <label className="block">
-                <span className="sr-only">Área</span>
-                <select
-                  name="area"
-                  defaultValue={area}
-                  aria-label="Filtrar por área"
-                  className="input-base appearance-none bg-[right_1rem_center] pr-10"
-                  style={{
-                    backgroundImage:
-                      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                >
-                  <option value="">Todas las áreas</option>
-                  {AREAS.map((a) => (
-                    <option key={a.value} value={a.value}>
-                      {a.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <Select name="area" defaultValue={area} aria-label="Filtrar por área">
+                <option value="">Todas las áreas</option>
+                {AREAS.map((a) => (
+                  <option key={a.value} value={a.value}>
+                    {a.label}
+                  </option>
+                ))}
+              </Select>
 
-              <label className="block">
-                <span className="sr-only">Modalidad</span>
-                <select
-                  name="modalidad"
-                  defaultValue={modalidad}
-                  aria-label="Filtrar por modalidad"
-                  className="input-base appearance-none bg-[right_1rem_center] pr-10"
-                  style={{
-                    backgroundImage:
-                      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                >
-                  <option value="">Cualquier modalidad</option>
-                  {MODALIDADES.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <Select name="tipo" defaultValue={tipo} aria-label="Filtrar por tipo de empleo">
+                <option value="">Cualquier jornada</option>
+                {TIPOS_EMPLEO.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </Select>
 
-              <button type="submit" className={cn(buttonVariants({ variant: "primary", size: "lg" }))}>
+              <Select name="modalidad" defaultValue={modalidad} aria-label="Filtrar por modalidad">
+                <option value="">Cualquier modalidad</option>
+                {MODALIDADES.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </Select>
+
+              <button type="submit" className={cn(buttonVariants({ variant: "primary", size: "lg" }), "sm:col-span-2 lg:col-span-1")}>
                 <Search className="h-5 w-5" /> Buscar
               </button>
             </div>
@@ -204,10 +135,8 @@ export default async function OfertasPage({
       {/* ---------- Resultados ---------- */}
       <section className="container-page py-10 sm:py-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-sm font-semibold text-ink-soft">
-            {total === 0
-              ? "Sin resultados"
-              : `${total} ${total === 1 ? "oferta" : "ofertas"} encontradas`}
+          <p className="text-sm font-semibold text-ink-soft" aria-live="polite">
+            {total === 0 ? "Sin resultados" : `${total} ${total === 1 ? "oferta" : "ofertas"}`}
             {totalPaginas > 1 && (
               <span className="text-muted">
                 {" "}
@@ -216,29 +145,26 @@ export default async function OfertasPage({
             )}
           </p>
 
-          {/* Chips de filtros activos */}
           {hayFiltros && (
             <div className="flex flex-wrap items-center gap-2">
               <SlidersHorizontal className="h-4 w-4 text-muted" />
-              {q && <ChipFiltro label={`"${q}"`} href={quitarFiltro({ q, ciudad, area, modalidad }, "q")} />}
+              {q && <ChipFiltro label={`"${q}"`} href={quitar(filtros, "q")} />}
               {ciudad && (
-                <ChipFiltro
-                  label={ciudad}
-                  icon={<MapPin className="h-3.5 w-3.5" />}
-                  href={quitarFiltro({ q, ciudad, area, modalidad }, "ciudad")}
-                />
+                <ChipFiltro label={ciudad} icon={<MapPin className="h-3.5 w-3.5" />} href={quitar(filtros, "ciudad")} />
               )}
-              {area && (
+              {area && <ChipFiltro label={labelDe(AREAS, area)} href={quitar(filtros, "area")} />}
+              {tipo && (
                 <ChipFiltro
-                  label={labelArea(area)}
-                  href={quitarFiltro({ q, ciudad, area, modalidad }, "area")}
+                  label={labelDe(TIPOS_EMPLEO, tipo)}
+                  icon={<Clock className="h-3.5 w-3.5" />}
+                  href={quitar(filtros, "tipo")}
                 />
               )}
               {modalidad && (
                 <ChipFiltro
-                  label={labelModalidad(modalidad)}
+                  label={labelDe(MODALIDADES, modalidad)}
                   icon={<Briefcase className="h-3.5 w-3.5" />}
-                  href={quitarFiltro({ q, ciudad, area, modalidad }, "modalidad")}
+                  href={quitar(filtros, "modalidad")}
                 />
               )}
               <Link
@@ -251,22 +177,33 @@ export default async function OfertasPage({
           )}
         </div>
 
-        {items.length > 0 ? (
+        {hayResultados ? (
           <>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((v) => (
-                <VacanteCard key={v.id} vacante={v} empresaNombre={v.empresa?.nombre_negocio} />
-              ))}
-            </div>
+            {destacadas.length > 0 && (
+              <div className="mt-8 rounded-2xl border-2 border-ink bg-sol-100 p-4 sm:p-5">
+                <h2 className="flex items-center gap-2 font-display text-lg font-extrabold text-ink">
+                  <Star className="h-5 w-5" /> Destacadas
+                </h2>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {destacadas.map((v) => (
+                    <VacanteCard key={v.id} vacante={v} href={hrefFicha(v.id)} />
+                  ))}
+                </div>
+              </div>
+            )}
 
-            {/* Paginación */}
+            {items.length > 0 && (
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {items.map((v) => (
+                  <VacanteCard key={v.id} vacante={v} href={hrefFicha(v.id)} />
+                ))}
+              </div>
+            )}
+
             {totalPaginas > 1 && (
-              <nav
-                aria-label="Paginación de ofertas"
-                className="mt-10 flex items-center justify-between gap-3"
-              >
+              <nav aria-label="Paginación de ofertas" className="mt-10 flex items-center justify-between gap-3">
                 {page > 1 ? (
-                  <Link href={hrefPagina(page - 1)} className={cn(buttonVariants({ variant: "outline", size: "md" }))}>
+                  <Link href={hrefOfertas(filtros, { page: page - 1 })} className={buttonVariants({ variant: "outline" })}>
                     <ArrowLeft className="h-4 w-4" /> Anteriores
                   </Link>
                 ) : (
@@ -276,7 +213,7 @@ export default async function OfertasPage({
                   Página {page} de {totalPaginas}
                 </span>
                 {page < totalPaginas ? (
-                  <Link href={hrefPagina(page + 1)} className={cn(buttonVariants({ variant: "outline", size: "md" }))}>
+                  <Link href={hrefOfertas(filtros, { page: page + 1 })} className={buttonVariants({ variant: "outline" })}>
                     Siguientes <ArrowRight className="h-4 w-4" />
                   </Link>
                 ) : (
@@ -289,24 +226,24 @@ export default async function OfertasPage({
           <div className="mt-8">
             <EmptyState
               icon={<Compass className="h-6 w-6" />}
-              title={hayFiltros ? "No hay ofertas con esos filtros" : "Todavía no hay ofertas"}
+              title={page > 1 ? "No hay más ofertas" : hayFiltros ? "No hay ofertas con esos filtros" : "Todavía no hay ofertas"}
               description={
                 hayFiltros
-                  ? "Prueba con menos filtros o cambia la palabra clave. También puedes registrarte y recibir por WhatsApp las que encajan contigo."
-                  : "Aún no se han publicado vacantes. Regístrate y te avisamos apenas llegue una que vaya contigo."
+                  ? "Prueba con menos filtros o cambia la palabra clave."
+                  : "Aún no hay vacantes publicadas. Crea tu perfil y te mostramos las que encajan contigo apenas lleguen."
               }
               action={
                 <div className="flex flex-wrap justify-center gap-3">
-                  {hayFiltros && (
-                    <Link href="/ofertas" className={cn(buttonVariants({ variant: "primary", size: "lg" }))}>
+                  {(hayFiltros || page > 1) && (
+                    <Link href="/ofertas" className={buttonVariants({ variant: "primary", size: "lg" })}>
                       Ver todas las ofertas
                     </Link>
                   )}
                   <Link
                     href="/registro-candidato"
-                    className={cn(buttonVariants({ variant: hayFiltros ? "outline" : "primary", size: "lg" }))}
+                    className={buttonVariants({ variant: hayFiltros ? "outline" : "primary", size: "lg" })}
                   >
-                    Registrarme gratis
+                    Crear mi perfil gratis
                   </Link>
                 </div>
               }
@@ -318,28 +255,11 @@ export default async function OfertasPage({
   );
 }
 
-/** Devuelve el href de /ofertas quitando un filtro concreto (mantiene los demás). */
-function quitarFiltro(
-  filtros: { q: string; ciudad: string; area: string; modalidad: string },
-  quitar: "q" | "ciudad" | "area" | "modalidad",
-): string {
-  const params = new URLSearchParams();
-  (["q", "ciudad", "area", "modalidad"] as const).forEach((k) => {
-    if (k !== quitar && filtros[k]) params.set(k, filtros[k]);
-  });
-  const qs = params.toString();
-  return qs ? `/ofertas?${qs}` : "/ofertas";
+function quitar(filtros: FiltrosOfertas, clave: ClaveFiltro): string {
+  return hrefOfertas(filtros, { [clave]: "" });
 }
 
-function ChipFiltro({
-  label,
-  href,
-  icon,
-}: {
-  label: string;
-  href: string;
-  icon?: React.ReactNode;
-}) {
+function ChipFiltro({ label, href, icon }: { label: string; href: string; icon?: React.ReactNode }) {
   return (
     <Link
       href={href}

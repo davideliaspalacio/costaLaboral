@@ -1,8 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-/** Rutas que exigen sesión iniciada. */
-const RUTAS_PROTEGIDAS = ["/perfil", "/mis-vacantes", "/empresa", "/admin", "/cuenta", "/hoja-de-vida"];
+/**
+ * Rutas que exigen sesión iniciada. Las legales (/terminos, /privacidad,
+ * /datos-personales) son públicas a propósito: un titular sin cuenta
+ * también puede ejercer sus derechos.
+ */
+const RUTAS_PROTEGIDAS = [
+  "/perfil",
+  "/mis-vacantes",
+  "/empresa",
+  "/admin",
+  "/cuenta",
+  "/hoja-de-vida",
+  "/linkedin",
+  "/pagos",
+];
 
 /**
  * Refresca la sesión de Supabase en cada request y protege rutas privadas.

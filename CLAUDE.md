@@ -1,33 +1,36 @@
 # CostaLaboral — notas para Claude Code
 
-Marketplace de empleo del Caribe colombiano (Next.js 16 + Supabase). Estilo JobToday. Fase 1 MVP.
+Plataforma de empleo del Caribe colombiano (Next.js 16 + Supabase). Spec MVP v2: todo abierto y gratis para postular; se cobra solo por servicios de valor agregado (IA, destacadas, Pro). No es agencia de colocación ni cobra comisión por contratación.
 
 ## Comandos
 
 ```bash
-supabase start          # Postgres + Auth local (requiere Docker); aplica migraciones
-pnpm dev                # servidor de desarrollo (localhost:3000)
-pnpm build              # build de producción
-pnpm exec tsc --noEmit  # typecheck
-pnpm seed               # datos de demo (node --env-file=.env.local scripts/seed.mjs)
-pnpm db:reset           # recrea la BD local y reaplica migraciones (BORRA datos)
+supabase start          # Postgres + Auth local (Docker); aplica migraciones
+pnpm dev                # localhost:3000
+pnpm typecheck          # tsc --noEmit
+pnpm test               # vitest (test/unit/**)
+pnpm test:integracion   # node --test contra Supabase local / servidor (test/*.test.mjs)
+pnpm seed               # datos de demo
+pnpm db:reset           # recrea la BD local (BORRA datos)
 ```
 
 ## Arquitectura (lo esencial)
 
-- **Auth:** Supabase Auth (email/password). `candidatos.id` y `empresas.id` == `auth.users.id`. El tipo de usuario vive en `user_metadata.tipo` (`candidato`|`empresa`). Admin = correo en `ADMIN_EMAILS`.
-- **Acceso a datos:** las lecturas/mutaciones cruzadas se hacen en el servidor con el **cliente service-role** (`lib/supabase/admin.ts`), autorizando en código. RLS protege el acceso directo del navegador. El service key es solo servidor (`import "server-only"`).
-- **Dominio puro** en `lib/matching.ts` (score) y `lib/plan.ts` (límites). No dupliques esta lógica en las páginas: úsalas.
-- **Server Components por defecto.** `"use client"` solo en formularios/interacción. Nunca pases handlers inline (`onClick`) desde un Server Component: extrae un componente cliente.
-- Rutas privadas protegidas en `proxy.ts` (Next 16 renombró `middleware` → `proxy`).
+- **Auth:** Supabase email/password. `candidatos.id`/`empresas.id` == `auth.users.id`; tipo en `user_metadata.tipo`. Staff en `staff` + `ADMIN_EMAILS`.
+- **Datos:** todas las escrituras en el servidor con `createAdminClient()` y autorización en código. El navegador no escribe en la BD.
+- **Dominio puro:** `lib/matching.ts`, `lib/vacante.ts`, `lib/entitlements.ts`, `lib/postulaciones-reglas.ts`, `lib/legal/dias-habiles.ts`. No dupliques esa lógica.
+- **Toda mutación** → `registrarAuditoria` (`lib/audit.ts`, append-only). **KPIs** → `registrarEvento`. **Abuso** → `limitar(...)`.
+- **Plataforma:** headers/CSP en `next.config.ts`, entorno en `lib/env.ts` + `instrumentation.ts`, logs con `lib/log.ts` (sin datos personales), crons en `vercel.json` protegidos con `autorizarCron`.
+- **Legal:** si cambias `/terminos` o `/privacidad`, sube `VERSION_*` en `lib/legal/documentos.ts`.
+- Server Components por defecto; `"use client"` solo para interacción. Rutas privadas en `lib/supabase/middleware.ts` (vía `proxy.ts`).
 
 ## Convenciones
 
 - Todo en español; moneda con `formatSalario`/`formatCOP`.
-- Colores solo por tokens Tailwind (`brand-*`, `accent-*`, `ink`, `muted`, `line`, `canvas`, `surface`). Sin hex.
+- Colores solo por tokens (`brand-*`, `accent-*`, `sol-*`, `ink`, `ink-soft`, `muted`, `line`, `canvas`, `surface`, `success-*`, `danger-*`). Estilo sticker: `border-2 border-ink` + sombra dura; sin gradientes.
 - Reutiliza `components/ui/*`, `components/vacante/*`, `components/site/*`.
 
-## Estado / pendientes
+## Estado
 
-- Supabase corre **local**. Para producción: `supabase link` + `supabase db push` + env en Vercel.
-- Fase 2 (no implementado): WhatsApp Business API, Wompi, IA Anthropic, academia de cursos.
+- IA implementada; pagos con pasarela **sandbox** (Wompi pendiente); WhatsApp solo plan (`docs/PLAN-WHATSAPP.md`).
+- Supabase corre local. Producción: `supabase link` + `supabase db push` + env en Vercel (ver `.env.example`, `docs/ARQUITECTURA.md`).

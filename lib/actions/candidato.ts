@@ -8,117 +8,179 @@ import { getUsuario } from "@/lib/auth";
 import { enviarBienvenida } from "@/lib/notificaciones";
 import { traducirAuthError } from "@/lib/errores";
 import { registrarEvento } from "@/lib/eventos";
-import { registrarConsentimiento } from "@/lib/actions/cuenta";
-import { PLAN_DURACION_DIAS, type PlanId } from "@/lib/constants";
+import { registrarAuditoria, diffCampos } from "@/lib/audit";
+import { limitar, mensajeLimite } from "@/lib/rate-limit";
+import { registrarConsentimientos } from "@/lib/legal/consentimientos";
+import { log } from "@/lib/log";
+import {
+  esquemaPerfil,
+  esquemaRegistro,
+  erroresPorCampo,
+  leerFormPerfil,
+  leerFormRegistro,
+  redactarDiff,
+} from "@/lib/candidato-validacion";
 
-export type FormState = { error?: string; ok?: boolean } | null;
+export type FormState = {
+  error?: string;
+  ok?: boolean;
+  campos?: Record<string, string>;
+  /** Valores enviados (sin contraseña) para no vaciar el formulario tras un error. */
+  valores?: Record<string, string | boolean>;
+} | null;
 
-/** Registro de candidato (1 paso). Crea cuenta + perfil + bienvenida. */
+const ERROR_CAMPOS = "Revisa los campos marcados.";
+
+/** Borra el usuario recién creado para no dejar cuentas sin perfil o sin evidencia de consentimiento. */
+async function deshacerRegistro(userId: string) {
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(userId); // la cascada borra la fila de candidatos
+  if (error) log.error("registro_rollback_fallo", { userId, err: error });
+  try {
+    const supabase = await createClient();
+    await supabase.auth.signOut();
+  } catch {
+    // sin sesión que cerrar
+  }
+}
+
+/** Registro de candidato (1 paso): cuenta + perfil + evidencia de consentimientos. */
 export async function registrarCandidato(_prev: FormState, formData: FormData): Promise<FormState> {
-  const g = (k: string) => String(formData.get(k) ?? "").trim();
-  const nombre = g("nombre");
-  const email = g("email");
-  const password = g("password");
-  const whatsapp = g("whatsapp");
-  const ciudad = g("ciudad");
-  const area_interes = g("area_interes");
-  const nivel_educativo = g("nivel_educativo");
-  const disponibilidad = g("disponibilidad") || "inmediata";
-  const barrio = g("barrio") || null;
-  const experiencia = g("experiencia") || null;
+  const entrada = leerFormRegistro(formData);
+  const { password: _omit, ...valores } = entrada;
 
-  const requeridos = { nombre, email, password, whatsapp, ciudad, area_interes, nivel_educativo };
-  if (Object.values(requeridos).some((valor) => !valor))
-    return { error: "Completa todos los campos obligatorios." };
-  if (password.length < 6) return { error: "La contraseña debe tener al menos 6 caracteres." };
+  const parsed = esquemaRegistro.safeParse(entrada);
+  if (!parsed.success) return { error: ERROR_CAMPOS, campos: erroresPorCampo(parsed.error), valores };
+  const d = parsed.data;
+
+  const limite = await limitar("registro");
+  if (!limite.permitido) return { error: mensajeLimite(limite), valores };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { tipo: "candidato", nombre } },
+    email: d.email,
+    password: d.password,
+    options: { data: { tipo: "candidato", nombre: d.nombre } },
   });
-  if (error) return { error: traducirAuthError(error.message) };
+  if (error) return { error: traducirAuthError(error.message), valores };
   const userId = data.user?.id;
-  if (!userId) return { error: "No se pudo crear la cuenta." };
+  if (!userId) return { error: "No se pudo crear la cuenta.", valores };
 
+  const ahora = new Date().toISOString();
   const admin = createAdminClient();
   const { error: insErr } = await admin.from("candidatos").insert({
     id: userId,
-    nombre,
-    email,
-    whatsapp,
-    ciudad,
-    barrio,
-    nivel_educativo,
-    area_interes,
-    experiencia,
-    disponibilidad,
+    nombre: d.nombre,
+    email: d.email,
+    whatsapp: d.whatsapp,
+    ciudad: d.ciudad,
+    barrio: d.barrio,
+    nivel_educativo: d.nivel_educativo,
+    area_interes: d.area_interes,
+    experiencia: d.experiencia,
+    disponibilidad: d.disponibilidad,
+    wsp_opt_in: d.wsp_opt_in,
+    wsp_opt_in_en: d.wsp_opt_in ? ahora : null,
+    mayor_de_edad: true,
   });
-  if (insErr) return { error: "No se pudo guardar tu perfil. Intenta de nuevo." };
+  if (insErr) {
+    log.error("registro_candidato_insert_fallo", { userId, err: insErr });
+    await deshacerRegistro(userId);
+    return { error: "No se pudo guardar tu perfil. Intenta de nuevo.", valores };
+  }
 
-  await enviarBienvenida({ id: userId, nombre, ciudad, area_interes });
+  const evidencia = await registrarConsentimientos(
+    { id: userId, tipo: "candidato" },
+    [
+      { finalidad: "tratamiento_datos", otorgado: true },
+      { finalidad: "terminos", otorgado: true },
+      { finalidad: "mayoria_edad", otorgado: true },
+      { finalidad: "whatsapp", otorgado: d.wsp_opt_in },
+    ],
+    "registro_candidato",
+  );
+  if (!evidencia) {
+    await deshacerRegistro(userId);
+    return { error: "No pudimos guardar tu autorización. Intenta de nuevo en un momento.", valores };
+  }
+
+  await registrarAuditoria({
+    actor: { id: userId, tipo: "candidato" },
+    accion: "candidato.registro",
+    entidad: "candidatos",
+    entidadId: userId,
+    metadata: {
+      ciudad: d.ciudad,
+      area_interes: d.area_interes,
+      wsp_opt_in: d.wsp_opt_in,
+      mayor_de_edad: true,
+    },
+  });
   await registrarEvento({
     tipo: "registro_candidato",
     actor_id: userId,
     actor_tipo: "candidato",
     entidad: "candidatos",
     entidad_id: userId,
-    meta: { ciudad, area_interes, nivel_educativo },
+    meta: { ciudad: d.ciudad, area_interes: d.area_interes, nivel_educativo: d.nivel_educativo, wsp_opt_in: d.wsp_opt_in },
   });
-  await registrarConsentimiento(userId, "candidato", { canal: "registro", acepta_whatsapp: true });
+  if (d.wsp_opt_in) await enviarBienvenida({ id: userId, nombre: d.nombre, ciudad: d.ciudad });
+
   redirect("/mis-vacantes?bienvenida=1");
 }
 
-/** Actualiza el perfil del candidato logueado. */
+const CAMPOS_PERFIL = [
+  "nombre",
+  "whatsapp",
+  "ciudad",
+  "barrio",
+  "area_interes",
+  "nivel_educativo",
+  "disponibilidad",
+  "experiencia",
+] as const;
+
+/** Actualiza el perfil del candidato logueado (con auditoría de los campos cambiados). */
 export async function actualizarPerfil(_prev: FormState, formData: FormData): Promise<FormState> {
   const sesion = await getUsuario();
   if (!sesion) redirect("/login?next=/perfil");
-  const g = (k: string) => String(formData.get(k) ?? "").trim();
+  const userId = sesion.user.id;
+
+  const parsed = esquemaPerfil.safeParse(leerFormPerfil(formData));
+  if (!parsed.success) return { error: ERROR_CAMPOS, campos: erroresPorCampo(parsed.error) };
+  const d = parsed.data;
 
   const admin = createAdminClient();
+  const { data: antes } = await admin
+    .from("candidatos")
+    .select(CAMPOS_PERFIL.join(", "))
+    .eq("id", userId)
+    .maybeSingle();
+  if (!antes) redirect("/registro-candidato");
+
   const { error } = await admin
     .from("candidatos")
-    .update({
-      nombre: g("nombre"),
-      whatsapp: g("whatsapp"),
-      ciudad: g("ciudad"),
-      barrio: g("barrio") || null,
-      area_interes: g("area_interes"),
-      nivel_educativo: g("nivel_educativo"),
-      disponibilidad: g("disponibilidad"),
-      experiencia: g("experiencia") || null,
-    })
-    .eq("id", sesion!.user.id);
+    .update({ ...d, actualizado_en: new Date().toISOString() })
+    .eq("id", userId);
   if (error) return { error: "No se pudo guardar. Intenta de nuevo." };
-  revalidatePath("/perfil");
-  revalidatePath("/mis-vacantes");
-  return { ok: true };
-}
 
-/**
- * Simula la activación de un plan pago (Fase 2 usará Wompi). Sirve para
- * probar los límites y el muro de pago en el MVP.
- */
-export async function activarPlan(plan: PlanId): Promise<FormState> {
-  const sesion = await getUsuario();
-  if (!sesion) redirect("/login?next=/planes");
-  const admin = createAdminClient();
-  const plan_vence =
-    plan === "gratis" ? null : new Date(Date.now() + PLAN_DURACION_DIAS * 86_400_000).toISOString();
-  const { error } = await admin
-    .from("candidatos")
-    .update({ plan, plan_vence, postulaciones_usadas: 0 })
-    .eq("id", sesion!.user.id);
-  if (error) return { error: "No se pudo activar el plan." };
-  await registrarEvento({
-    tipo: "plan_activado",
-    actor_id: sesion!.user.id,
-    actor_tipo: "candidato",
-    meta: { plan },
-  });
+  const diff = redactarDiff(diffCampos(antes as unknown as Record<string, unknown>, d));
+  if (Object.keys(diff.antes).length || diff.sensiblesCambiados.length) {
+    await registrarAuditoria({
+      actor: { id: userId, tipo: "candidato" },
+      accion: "candidato.perfil_actualizado",
+      entidad: "candidatos",
+      entidadId: userId,
+      antes: diff.antes,
+      despues: diff.despues,
+      metadata: {
+        campos: [...Object.keys(diff.despues), ...diff.sensiblesCambiados],
+        sensibles_cambiados: diff.sensiblesCambiados,
+      },
+    });
+  }
+
   revalidatePath("/perfil");
-  revalidatePath("/planes");
   revalidatePath("/mis-vacantes");
   return { ok: true };
 }

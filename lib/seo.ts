@@ -5,7 +5,7 @@ export const SITE = {
   url: (process.env.NEXT_PUBLIC_SITE_URL || "https://costalaboral.co").replace(/\/$/, ""),
   locale: "es_CO",
   descripcion:
-    "La plataforma de empleo del Caribe colombiano. Recibe solo las vacantes que encajan con tu perfil, directo a tu WhatsApp. Las empresas publican gratis.",
+    "CostaLaboral conecta candidatos y empresas del Caribe colombiano. Vacantes abiertas con empresa y salario, postulación gratis y match explicable. Las empresas publican gratis.",
   ciudades: ["Barranquilla", "Cartagena", "Santa Marta", "Montería", "Sincelejo", "Valledupar"],
   twitter: "@costalaboral",
 };
@@ -83,13 +83,18 @@ export function websiteJsonLd() {
   };
 }
 
-const EMPLOYMENT = {
-  presencial: "FULL_TIME",
-  remoto: "FULL_TIME",
-  hibrido: "FULL_TIME",
+/** Tipo de empleo (jornada) → employmentType de schema.org. */
+export const EMPLOYMENT_TYPE = {
+  tiempo_completo: "FULL_TIME",
   medio_tiempo: "PART_TIME",
   por_dias: "PER_DIEM",
+  temporal: "TEMPORARY",
+  practicas: "INTERN",
 } as const;
+
+export function employmentTypeDe(tipo: string): string {
+  return EMPLOYMENT_TYPE[tipo as keyof typeof EMPLOYMENT_TYPE] ?? "FULL_TIME";
+}
 
 /** Schema JobPosting — habilita resultados enriquecidos y Google Jobs. */
 export function jobPostingJsonLd(v: {
@@ -99,24 +104,27 @@ export function jobPostingJsonLd(v: {
   requisitos?: string;
   ciudad: string;
   modalidad: string;
+  tipo: string;
   salario_min: number | null;
   salario_max: number | null;
+  publicada_en: string | null;
   creado_en: string;
   expira_en: string;
-  empresaNombre?: string;
+  empresaNombre: string;
 }) {
-  const desc = [v.descripcion, v.requisitos ? `Requisitos: ${v.requisitos}` : ""].filter(Boolean).join(" ");
+  const desc = [v.descripcion, v.requisitos ? `Requisitos: ${v.requisitos}` : ""].filter(Boolean).join("\n\n");
+  const salario = v.salario_min ?? v.salario_max;
   return {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     title: v.titulo,
     description: desc,
-    datePosted: new Date(v.creado_en).toISOString(),
+    datePosted: new Date(v.publicada_en ?? v.creado_en).toISOString(),
     validThrough: new Date(v.expira_en).toISOString(),
-    employmentType: EMPLOYMENT[v.modalidad as keyof typeof EMPLOYMENT] ?? "FULL_TIME",
+    employmentType: employmentTypeDe(v.tipo),
     hiringOrganization: {
       "@type": "Organization",
-      name: v.empresaNombre || "Empresa confidencial",
+      name: v.empresaNombre,
     },
     jobLocation: {
       "@type": "Place",
@@ -127,16 +135,21 @@ export function jobPostingJsonLd(v: {
         addressCountry: "CO",
       },
     },
-    ...(v.modalidad === "remoto" ? { jobLocationType: "TELECOMMUTE" } : {}),
-    ...(v.salario_min
+    ...(v.modalidad === "remoto"
+      ? {
+          jobLocationType: "TELECOMMUTE",
+          applicantLocationRequirements: { "@type": "Country", name: "Colombia" },
+        }
+      : {}),
+    ...(salario
       ? {
           baseSalary: {
             "@type": "MonetaryAmount",
             currency: "COP",
             value: {
               "@type": "QuantitativeValue",
-              minValue: v.salario_min,
-              maxValue: v.salario_max ?? v.salario_min,
+              minValue: salario,
+              maxValue: v.salario_max ?? salario,
               unitText: "MONTH",
             },
           },

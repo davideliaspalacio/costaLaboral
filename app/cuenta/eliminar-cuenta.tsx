@@ -42,8 +42,8 @@ export function EliminarCuenta() {
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
           Esta acción es <strong className="font-semibold">permanente</strong>. Se borrarán tu
-          cuenta y todos tus datos (perfil, postulaciones, notificaciones y hojas de vida). No se
-          puede deshacer.
+          cuenta y tu perfil con la información asociada, y se cancelará cualquier plan vigente. No
+          se puede deshacer.
         </span>
       </div>
 

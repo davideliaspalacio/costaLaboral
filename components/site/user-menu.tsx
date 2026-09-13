@@ -2,15 +2,39 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, LogOut, User as UserIcon, LayoutDashboard, Heart, FileText, Settings } from "lucide-react";
+import {
+  ChevronDown,
+  LogOut,
+  User as UserIcon,
+  LayoutDashboard,
+  Sparkles,
+  FileText,
+  Settings,
+  IdCard,
+  Building2,
+  Search,
+  Tag,
+  ShieldCheck,
+} from "lucide-react";
 import { cerrarSesion } from "@/lib/actions/auth";
 import { iniciales } from "@/lib/utils";
 
-export function UserMenu({ nombre, tipo }: { nombre: string; tipo: "candidato" | "empresa" | "admin" }) {
+export function UserMenu({
+  nombre,
+  tipo,
+  esStaff = false,
+}: {
+  nombre: string;
+  tipo: "candidato" | "empresa";
+  esStaff?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
       <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         className="flex items-center gap-2 rounded-full border-2 border-ink bg-surface py-1 pl-1 pr-2.5 text-sm font-bold text-ink transition hover:shadow-[var(--shadow-sticker)]"
@@ -22,31 +46,51 @@ export function UserMenu({ nombre, tipo }: { nombre: string; tipo: "candidato" |
         <ChevronDown className="h-4 w-4 text-muted" />
       </button>
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl border-2 border-ink bg-surface py-1.5 shadow-[var(--shadow-sticker-lg)]">
-          {tipo === "empresa" ? (
-            <MenuLink href="/empresa/panel" icon={<LayoutDashboard className="h-4 w-4" />}>
-              Mi panel
+        <div
+          role="menu"
+          className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-2xl border-2 border-ink bg-surface py-1.5 shadow-[var(--shadow-sticker-lg)]"
+        >
+          <div className="md:hidden">
+            <MenuLink href="/ofertas" icon={<Search className="h-4 w-4" />}>
+              Ofertas
             </MenuLink>
+            <MenuLink href="/planes" icon={<Tag className="h-4 w-4" />}>
+              Planes
+            </MenuLink>
+            <div className="my-1 border-t-2 border-line" />
+          </div>
+          {tipo === "empresa" ? (
+            <>
+              <MenuLink href="/empresa/panel" icon={<LayoutDashboard className="h-4 w-4" />}>
+                Panel
+              </MenuLink>
+              <MenuLink href="/empresa/perfil" icon={<Building2 className="h-4 w-4" />}>
+                Perfil de empresa
+              </MenuLink>
+            </>
           ) : (
             <>
-              <MenuLink href="/mis-vacantes" icon={<Heart className="h-4 w-4" />}>
-                Mis vacantes
+              <MenuLink href="/mis-vacantes" icon={<Sparkles className="h-4 w-4" />}>
+                Recomendadas
               </MenuLink>
               <MenuLink href="/hoja-de-vida" icon={<FileText className="h-4 w-4" />}>
-                Mi hoja de vida IA
+                Hoja de vida
+              </MenuLink>
+              <MenuLink href="/linkedin" icon={<IdCard className="h-4 w-4" />}>
+                LinkedIn
               </MenuLink>
               <MenuLink href="/perfil" icon={<UserIcon className="h-4 w-4" />}>
-                Mi perfil
+                Perfil
               </MenuLink>
             </>
           )}
-          {tipo === "admin" && (
-            <MenuLink href="/admin" icon={<LayoutDashboard className="h-4 w-4" />}>
-              Panel admin
+          {esStaff && (
+            <MenuLink href="/admin" icon={<ShieldCheck className="h-4 w-4" />}>
+              Admin
             </MenuLink>
           )}
           <MenuLink href="/cuenta" icon={<Settings className="h-4 w-4" />}>
-            Mi cuenta
+            Cuenta
           </MenuLink>
           <div className="my-1 border-t-2 border-line" />
           <form action={cerrarSesion}>
@@ -67,6 +111,7 @@ function MenuLink({ href, icon, children }: { href: string; icon: React.ReactNod
   return (
     <Link
       href={href}
+      role="menuitem"
       className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold text-ink-soft hover:bg-brand-50 hover:text-brand-700"
     >
       {icon}

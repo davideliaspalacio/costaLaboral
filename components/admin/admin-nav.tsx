@@ -9,6 +9,12 @@ import {
   Briefcase,
   Activity,
   ShieldCheck,
+  Flag,
+  ScrollText,
+  CreditCard,
+  Sparkles,
+  Gauge,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +22,8 @@ export type NavItem = {
   href: string;
   label: string;
   icon: keyof typeof ICONOS;
+  /** Contador de pendientes (opcional). */
+  badge?: number;
 };
 
 const ICONOS = {
@@ -23,7 +31,13 @@ const ICONOS = {
   candidatos: Users,
   empresas: Building2,
   vacantes: Briefcase,
+  reportes: Flag,
   actividad: Activity,
+  auditoria: ScrollText,
+  pagos: CreditCard,
+  ia: Sparkles,
+  kpis: Gauge,
+  solicitudes: Inbox,
   staff: ShieldCheck,
 } as const;
 
@@ -31,6 +45,20 @@ const ICONOS = {
 function activo(pathname: string, href: string): boolean {
   if (href === "/admin") return pathname === "/admin";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function Contador({ n, on }: { n?: number; on: boolean }) {
+  if (!n) return null;
+  return (
+    <span
+      className={cn(
+        "ml-auto rounded-full border-2 border-ink px-1.5 text-xs tabular-nums",
+        on ? "bg-surface text-ink" : "bg-accent-500 text-white",
+      )}
+    >
+      {n > 99 ? "99+" : n}
+    </span>
+  );
 }
 
 /** Navegación lateral (escritorio). Marca el item activo con `usePathname`. */
@@ -55,6 +83,7 @@ export function AdminSidebarNav({ items }: { items: NavItem[] }) {
           >
             <Icon className="h-5 w-5 shrink-0" />
             {item.label}
+            <Contador n={item.badge} on={on} />
           </Link>
         );
       })}
@@ -87,6 +116,7 @@ export function AdminTabsNav({ items }: { items: NavItem[] }) {
           >
             <Icon className="h-4 w-4 shrink-0" />
             {item.label}
+            <Contador n={item.badge} on={on} />
           </Link>
         );
       })}

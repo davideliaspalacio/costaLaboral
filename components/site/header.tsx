@@ -2,19 +2,25 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { buttonVariants } from "@/components/ui/button";
 import { UserMenu } from "@/components/site/user-menu";
-import { getUsuario, getCandidato, getEmpresa, esAdmin } from "@/lib/auth";
+import { getUsuario, getCandidato, getEmpresa } from "@/lib/auth";
+import { getStaff } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+
+const navLink = cn(buttonVariants({ variant: "ghost", size: "sm" }));
 
 export async function Header() {
   const sesion = await getUsuario();
+  const tipo: "candidato" | "empresa" = sesion?.tipo === "empresa" ? "empresa" : "candidato";
   let nombre = "";
-  let tipo: "candidato" | "empresa" | "admin" = "candidato";
+  let esStaff = false;
 
   if (sesion) {
-    if (esAdmin(sesion.email)) tipo = "admin";
-    else tipo = sesion.tipo === "empresa" ? "empresa" : "candidato";
-    if (tipo === "empresa") nombre = (await getEmpresa())?.nombre_contacto ?? sesion.email;
-    else nombre = (await getCandidato())?.nombre ?? sesion.email;
+    const [perfil, staff] = await Promise.all([
+      tipo === "empresa" ? getEmpresa().then((e) => e?.nombre_contacto) : getCandidato().then((c) => c?.nombre),
+      getStaff(),
+    ]);
+    nombre = perfil ?? staff?.nombre ?? sesion.email;
+    esStaff = !!staff;
   }
 
   return (
@@ -22,26 +28,36 @@ export async function Header() {
       <div className="container-page flex h-16 items-center justify-between gap-4">
         <Logo />
 
-        <nav className="hidden items-center gap-1 md:flex">
-          <Link href="/ofertas" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+        <nav aria-label="Principal" className="hidden items-center gap-1 md:flex">
+          <Link href="/ofertas" className={navLink}>
             Ofertas
           </Link>
           {sesion && tipo === "candidato" && (
-            <Link href="/hoja-de-vida" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-              Hoja de vida IA
-            </Link>
+            <>
+              <Link href="/mis-vacantes" className={navLink}>
+                Recomendadas
+              </Link>
+              <Link href="/hoja-de-vida" className={navLink}>
+                Hoja de vida
+              </Link>
+            </>
           )}
-          <Link href="/registro-empresa" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-            Publicar vacante
-          </Link>
-          <Link href="/planes" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+          {sesion && tipo === "empresa" ? (
+            <Link href="/empresa/panel" className={navLink}>
+              Panel
+            </Link>
+          ) : (
+            !sesion && (
+              <Link href="/registro-empresa" className={navLink}>
+                Para empresas
+              </Link>
+            )
+          )}
+          <Link href="/planes" className={navLink}>
             Planes
           </Link>
-          <Link href="/blog" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-            Blog
-          </Link>
-          {tipo === "admin" && (
-            <Link href="/admin" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+          {esStaff && (
+            <Link href="/admin" className={navLink}>
               Admin
             </Link>
           )}
@@ -49,17 +65,17 @@ export async function Header() {
 
         <div className="flex items-center gap-2">
           {sesion ? (
-            <UserMenu nombre={nombre} tipo={tipo} />
+            <UserMenu nombre={nombre} tipo={tipo} esStaff={esStaff} />
           ) : (
             <>
-              <Link
-                href="/login"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden sm:inline-flex")}
-              >
+              <Link href="/ofertas" className={cn(navLink, "md:hidden")}>
+                Ofertas
+              </Link>
+              <Link href="/login" className={cn(navLink, "hidden sm:inline-flex")}>
                 Ingresar
               </Link>
               <Link href="/registro-candidato" className={cn(buttonVariants({ variant: "sol", size: "sm" }))}>
-                Buscar camello
+                Crear perfil gratis
               </Link>
             </>
           )}

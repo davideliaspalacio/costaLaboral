@@ -1,15 +1,15 @@
 import { MapPin, Phone, Mail } from "lucide-react";
-import type { ContenidoHV } from "@/lib/ai";
+import type { ContenidoHV } from "@/lib/ia/tipos";
 
 /* ============================================================
-   Vista "documento" de una hoja de vida. Estilo sticker limpio,
-   pensado para leer/imprimir. Sin interacción (server-safe).
+   Vista "documento" de una hoja de vida. Estilo sticker limpio en
+   pantalla; en impresión queda plano (A4). Sin interacción.
    ============================================================ */
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <section className="mt-6 first:mt-0">
-      <h3 className="mb-3 border-b-2 border-ink pb-1.5 font-display text-sm font-extrabold uppercase tracking-wide text-ink">
+    <section className="mt-6 break-inside-avoid-page first:mt-0 print:mt-4">
+      <h3 className="mb-3 border-b-2 border-ink pb-1.5 font-display text-sm font-extrabold uppercase tracking-wide text-ink print:mb-2">
         {titulo}
       </h3>
       {children}
@@ -31,10 +31,9 @@ export function CvDocument({
   contenido: ContenidoHV;
 }) {
   return (
-    <article className="rounded-2xl border-2 border-ink bg-surface p-6 sm:p-8">
-      {/* Cabecera del documento */}
-      <header className="border-b-2 border-ink pb-5">
-        <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{nombre}</h2>
+    <article className="rounded-2xl border-2 border-ink bg-surface p-6 sm:p-8 print:rounded-none print:border-0 print:p-0">
+      <header className="border-b-2 border-ink pb-5 print:pb-3">
+        <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl print:text-3xl">{nombre}</h2>
         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm font-medium text-ink-soft">
           <span className="inline-flex items-center gap-1.5">
             <MapPin className="h-4 w-4 text-brand-600" /> {ciudad}
@@ -58,11 +57,11 @@ export function CvDocument({
         </Seccion>
       )}
 
-      {contenido.habilidades?.length > 0 && (
+      {contenido.habilidades.length > 0 && (
         <Seccion titulo="Habilidades">
           <ul className="flex flex-wrap gap-2">
             {contenido.habilidades.map((h, i) => (
-              <li key={i} className="chip">
+              <li key={i} className="chip print:border print:px-2 print:py-0.5 print:text-xs">
                 {h}
               </li>
             ))}
@@ -70,11 +69,11 @@ export function CvDocument({
         </Seccion>
       )}
 
-      {contenido.experiencia?.length > 0 && (
+      {contenido.experiencia.length > 0 && (
         <Seccion titulo="Experiencia">
-          <div className="space-y-5">
+          <div className="space-y-5 print:space-y-3">
             {contenido.experiencia.map((e, i) => (
-              <div key={i} className="border-l-2 border-line pl-4">
+              <div key={i} className="break-inside-avoid border-l-2 border-line pl-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                   <p className="font-display font-extrabold text-ink">{e.cargo}</p>
                   {e.periodo && e.periodo !== "—" && (
@@ -82,7 +81,7 @@ export function CvDocument({
                   )}
                 </div>
                 {e.empresa && <p className="text-sm font-semibold text-brand-700">{e.empresa}</p>}
-                {e.logros?.length > 0 && (
+                {e.logros.length > 0 && (
                   <ul className="mt-2 space-y-1.5">
                     {e.logros.map((lg, j) => (
                       <li key={j} className="flex gap-2 text-[15px] leading-relaxed text-ink-soft">
@@ -98,7 +97,7 @@ export function CvDocument({
         </Seccion>
       )}
 
-      {contenido.educacion?.length > 0 && (
+      {contenido.educacion.length > 0 && (
         <Seccion titulo="Educación">
           <ul className="space-y-1.5">
             {contenido.educacion.map((ed, i) => (
@@ -111,7 +110,7 @@ export function CvDocument({
         </Seccion>
       )}
 
-      {contenido.logros?.length > 0 && (
+      {contenido.logros.length > 0 && (
         <Seccion titulo="Logros y fortalezas">
           <ul className="space-y-1.5">
             {contenido.logros.map((lg, i) => (

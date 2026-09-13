@@ -12,8 +12,8 @@ export default async function LoginPage({
   const { next = "" } = await searchParams;
   return (
     <AuthShell
-      title="Hola de nuevo 👋"
-      subtitle="Entra para ver tus vacantes y postulaciones."
+      title="Hola de nuevo"
+      subtitle="Entra para ver tus vacantes recomendadas y tus postulaciones."
       footer={
         <div className="space-y-1">
           <AuthFooterLink href="/registro-candidato" prompt="¿No tienes cuenta?" cta="Regístrate gratis" />

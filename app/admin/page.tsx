@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   Users,
   Building2,
@@ -11,68 +12,155 @@ import {
   ShieldAlert,
   Activity,
   ArrowUpRight,
+  Flag,
+  Inbox,
+  AlarmClock,
 } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { MetricCard } from "@/components/admin/metric-card";
+import { PageHeader } from "@/components/admin/page-header";
 import { EventosPorTipoChart, SerieDiariaChart } from "@/components/admin/eventos-chart";
 import { ActividadFeed } from "@/components/admin/actividad-feed";
-import { getMetricas } from "@/lib/data/metrics";
+import { getColasPendientes, getMetricas } from "@/lib/data/metrics";
 import { getMetricasAvanzadas, getEventosRecientes } from "@/lib/data/admin";
+import { exigirPermiso, puede } from "@/lib/roles";
+import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Resumen · Administración" };
 
+function ColaCard({
+  href,
+  icon,
+  label,
+  total,
+  urgente,
+  detalle,
+}: {
+  href: string;
+  icon: ReactNode;
+  label: string;
+  total: number;
+  urgente?: boolean;
+  detalle: string;
+}) {
+  const activa = total > 0;
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "group card flex items-center gap-4 p-4 transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[var(--shadow-sticker-lg)]",
+        activa && "shadow-[var(--shadow-sticker)]",
+        activa && urgente ? "bg-danger-50" : activa ? "bg-sol-100" : "bg-surface",
+      )}
+    >
+      <span
+        className={cn(
+          "grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-2 border-ink",
+          activa && urgente ? "bg-danger-500 text-white" : activa ? "bg-sol-400 text-ink" : "bg-canvas text-muted",
+        )}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold text-ink">{label}</span>
+        <span className="block text-xs text-ink-soft">{detalle}</span>
+      </span>
+      <span className="font-display text-3xl font-extrabold text-ink tabular-nums">{total}</span>
+      <ArrowUpRight className="h-4 w-4 shrink-0 text-muted group-hover:text-ink" />
+    </Link>
+  );
+}
+
 export default async function AdminResumenPage() {
-  const [metricas, avanzadas, eventos] = await Promise.all([
+  const staff = await exigirPermiso("ver");
+  const [metricas, avanzadas, eventos, colas] = await Promise.all([
     getMetricas(),
     getMetricasAvanzadas(),
     getEventosRecientes(12),
+    getColasPendientes(),
   ]);
 
   const hoy = new Date().toLocaleDateString("es-CO", {
+    timeZone: "America/Bogota",
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
+  const eventos14d = avanzadas.serie14d.reduce((s, d) => s + d.total, 0);
 
-  const pendientes = avanzadas.empresasPendientes + avanzadas.vacantesPendientes + avanzadas.vacantesReportadas;
+  const puedeModerar = puede(staff.rol, "moderar");
+  const puedeVerificar = puede(staff.rol, "verificar");
+  const puedeSolicitudes = puede(staff.rol, "atender_solicitudes");
 
   return (
     <main className="space-y-10">
-      {/* ---------- CABECERA ---------- */}
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <span className="kicker">Panel interno</span>
-          <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
-            Resumen de la plataforma
-          </h1>
-          <p className="mt-1 text-sm capitalize text-ink-soft">{hoy}</p>
+      <PageHeader kicker="Panel interno" titulo="Resumen de la plataforma">
+        <span className="capitalize">{hoy}</span>
+      </PageHeader>
+
+      {/* ---------- COLAS PENDIENTES ---------- */}
+      <section aria-labelledby="colas">
+        <h2 id="colas" className="mb-3 font-display text-lg font-bold tracking-tight text-ink">
+          Pendientes
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {puedeModerar && (
+            <>
+              <ColaCard
+                href="/admin/vacantes"
+                icon={<ShieldAlert className="h-5 w-5" />}
+                label="Vacantes en revisión"
+                total={colas.vacantesRevision}
+                detalle="Empresas sin verificar o contenido sospechoso."
+              />
+              <ColaCard
+                href="/admin/reportes"
+                icon={<Flag className="h-5 w-5" />}
+                label="Vacantes reportadas"
+                total={colas.vacantesReportadas}
+                urgente
+                detalle={`${colas.reportesAbiertos} reportes abiertos en total.`}
+              />
+            </>
+          )}
+          {puedeVerificar && (
+            <ColaCard
+              href="/admin/empresas"
+              icon={<BadgeCheck className="h-5 w-5" />}
+              label="Verificaciones en revisión"
+              total={colas.verificacionesRevision}
+              detalle="Empresas que pidieron verificarse."
+            />
+          )}
+          {puedeSolicitudes && (
+            <>
+              <ColaCard
+                href="/admin/solicitudes"
+                icon={<AlarmClock className="h-5 w-5" />}
+                label="Solicitudes por vencer"
+                total={colas.solicitudesPorVencer}
+                detalle="Vencen en 3 días hábiles o menos."
+              />
+              <ColaCard
+                href="/admin/solicitudes"
+                icon={<Inbox className="h-5 w-5" />}
+                label="Solicitudes vencidas"
+                total={colas.solicitudesVencidas}
+                urgente
+                detalle="Plazo legal superado (Ley 1581)."
+              />
+            </>
+          )}
         </div>
-        {pendientes > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {avanzadas.empresasPendientes > 0 && (
-              <Link href="/admin/empresas" className={buttonVariants({ variant: "outline", size: "sm" })}>
-                <BadgeCheck className="h-4 w-4" /> {avanzadas.empresasPendientes} por verificar
-              </Link>
-            )}
-            {avanzadas.vacantesPendientes + avanzadas.vacantesReportadas > 0 && (
-              <Link href="/admin/vacantes?estado=reportada" className={buttonVariants({ variant: "outline", size: "sm" })}>
-                <ShieldAlert className="h-4 w-4" />{" "}
-                {avanzadas.vacantesPendientes + avanzadas.vacantesReportadas} por moderar
-              </Link>
-            )}
-          </div>
-        )}
-      </header>
+      </section>
 
       {/* ---------- MÉTRICAS ---------- */}
       <section>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <MetricCard
             icon={<Users className="h-5 w-5" />}
-            label="Candidatos registrados"
+            label={`Candidatos (${avanzadas.candidatosActivos.toLocaleString("es-CO")} activos)`}
             valor={metricas.candidatos.toLocaleString("es-CO")}
             valorNumerico={metricas.candidatos}
             meta={1000}
@@ -80,7 +168,7 @@ export default async function AdminResumenPage() {
           />
           <MetricCard
             icon={<Building2 className="h-5 w-5" />}
-            label="Empresas"
+            label={`Empresas (${avanzadas.empresasVerificadas.toLocaleString("es-CO")} verificadas)`}
             valor={metricas.empresas.toLocaleString("es-CO")}
             valorNumerico={metricas.empresas}
             meta={100}
@@ -88,9 +176,9 @@ export default async function AdminResumenPage() {
           />
           <MetricCard
             icon={<Briefcase className="h-5 w-5" />}
-            label="Vacantes activas"
-            valor={metricas.vacantesActivas.toLocaleString("es-CO")}
-            valorNumerico={metricas.vacantesActivas}
+            label="Vacantes visibles en el portal"
+            valor={metricas.vacantesPublicas.toLocaleString("es-CO")}
+            valorNumerico={metricas.vacantesPublicas}
             meta={150}
             metaCorta={30}
           />
@@ -101,17 +189,8 @@ export default async function AdminResumenPage() {
             valorNumerico={metricas.postulaciones}
           />
           <MetricCard
-            icon={<MessageCircle className="h-5 w-5" />}
-            label="CTR WhatsApp"
-            valor={`${metricas.ctr}%`}
-            valorNumerico={metricas.ctr}
-            meta={30}
-            metaCorta={25}
-            sufijo="%"
-          />
-          <MetricCard
             icon={<Eye className="h-5 w-5" />}
-            label="Vistas promedio por vacante"
+            label="Vistas promedio por vacante visible"
             valor={metricas.vistasPromedio.toLocaleString("es-CO")}
             valorNumerico={metricas.vistasPromedio}
             meta={40}
@@ -119,7 +198,7 @@ export default async function AdminResumenPage() {
           />
           <MetricCard
             icon={<TrendingUp className="h-5 w-5" />}
-            label="Ratio candidatos / vacante"
+            label="Candidatos por vacante visible"
             valor={`${metricas.ratioCandidatosVacante}x`}
             valorNumerico={metricas.ratioCandidatosVacante}
             meta={5}
@@ -127,15 +206,28 @@ export default async function AdminResumenPage() {
             sufijo="x"
           />
           <MetricCard
+            icon={<MessageCircle className="h-5 w-5" />}
+            label={`Avisos WhatsApp marcados leídos (${metricas.notifLeidas}/${metricas.notifEnviadas}, envío manual)`}
+            valor={`${metricas.lecturaNotif}%`}
+            valorNumerico={metricas.lecturaNotif}
+          />
+          <MetricCard
             icon={<Activity className="h-5 w-5" />}
             label="Eventos (14 días)"
-            valor={avanzadas.serie14d.reduce((s, d) => s + d.total, 0).toLocaleString("es-CO")}
-            valorNumerico={avanzadas.serie14d.reduce((s, d) => s + d.total, 0)}
+            valor={eventos14d.toLocaleString("es-CO")}
+            valorNumerico={eventos14d}
           />
         </div>
         <p className="mt-3 text-xs text-muted">
-          Metas de la fase 1 (sección 7.1). El porcentaje y la barra comparan el valor actual con la
-          meta a 90 días.
+          Metas de volumen de la fase 1. Los KPIs de producto con semáforo están en{" "}
+          {puede(staff.rol, "ver_kpis") ? (
+            <Link href="/admin/kpis" className="font-bold text-brand-700 hover:underline">
+              KPIs
+            </Link>
+          ) : (
+            "KPIs"
+          )}
+          .
         </p>
       </section>
 
@@ -153,10 +245,8 @@ export default async function AdminResumenPage() {
               <Activity className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="font-display text-lg font-bold tracking-tight text-ink">
-                Actividad reciente
-              </h2>
-              <p className="text-sm text-ink-soft">Últimos eventos de toda la plataforma.</p>
+              <h2 className="font-display text-lg font-bold tracking-tight text-ink">Actividad reciente</h2>
+              <p className="text-sm text-ink-soft">Últimos eventos de producto.</p>
             </div>
           </div>
           <Link
@@ -167,36 +257,7 @@ export default async function AdminResumenPage() {
           </Link>
         </div>
         <Card className="overflow-hidden">
-          <ActividadFeed eventos={eventos} />
-        </Card>
-      </section>
-
-      {/* ---------- WHATSAPP ---------- */}
-      <section>
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-2xl border-2 border-ink bg-brand-50 text-brand-600">
-              <MessageCircle className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="font-display text-lg font-bold tracking-tight text-ink">
-                Notificaciones WhatsApp
-              </h2>
-              <p className="text-sm text-ink-soft">Envío manual en fase 1 (hipótesis H3).</p>
-            </div>
-          </div>
-          <Badge tone="brand" className="tabular-nums">
-            {metricas.notifLeidas.toLocaleString("es-CO")} / {metricas.notifEnviadas.toLocaleString("es-CO")} leídas
-          </Badge>
-        </div>
-        <Card className="p-5 sm:p-6">
-          <p className="text-sm text-ink-soft">
-            La cola de mensajes por enviar y su gestión detallada están en la vista de{" "}
-            <Link href="/admin/actividad" className="font-bold text-brand-700 hover:underline">
-              actividad
-            </Link>
-            . CTR actual: <strong className="text-ink tabular-nums">{metricas.ctr}%</strong>.
-          </p>
+          <ActividadFeed eventos={eventos.items} />
         </Card>
       </section>
     </main>
