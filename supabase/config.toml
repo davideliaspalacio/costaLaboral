@@ -411,18 +411,3 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
-
-# ------------------------------------------------------------
-# Proyecto en la nube (vialink-backend / CostaLaboral).
-# `supabase config push` aplica estos valores al proyecto enlazado;
-# el resto hereda la configuración local (p. ej. sin confirmación de correo).
-# ------------------------------------------------------------
-[remotes.production]
-project_id = "bmskoszxhfbvcjrludle"
-
-[remotes.production.auth]
-site_url = "https://costa-laboral.vercel.app"
-additional_redirect_urls = ["https://costa-laboral.vercel.app/**", "http://localhost:3000/**"]
-
-[remotes.production.auth.email]
-enable_confirmations = false
